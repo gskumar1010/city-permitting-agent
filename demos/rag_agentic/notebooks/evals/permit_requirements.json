@@ -1,0 +1,70 @@
+
+{
+  "permit_requirements": [
+    {
+      "id": "REQ_001",
+      "category": "business_licensing",
+      "title": "Business License",
+      "description": "Valid business license issued by Denver Department of Licensing",
+      "required": true,
+      "documents": ["Business License Certificate"],
+      "validation_criteria": ["License must be current", "License type must match business activity"]
+    },
+    {
+      "id": "REQ_002", 
+      "category": "health_safety",
+      "title": "Food Safety Inspection",
+      "description": "Current food safety inspection certificate from Denver Health Department",
+      "required": true,
+      "documents": ["Food Safety Inspection Certificate"],
+      "validation_criteria": ["Inspection must be within last 12 months", "No critical violations"]
+    },
+    {
+      "id": "REQ_003",
+      "category": "operations",
+      "title": "Affidavit of Commissary",
+      "description": "Signed affidavit confirming commissary kitchen arrangement",
+      "required": true,
+      "documents": ["Commissary Affidavit", "Commissary License"],
+      "validation_criteria": ["Commissary must be licensed", "Agreement must be current"]
+    },
+    {
+      "id": "REQ_004",
+      "category": "zoning",
+      "title": "Zoning Permit",
+      "description": "Authorization to operate in designated zones",
+      "required": true,
+      "documents": ["Zoning Permit", "Location Authorization"],
+      "validation_criteria": ["Must specify approved operating zones", "No residential zone restrictions"]
+    },
+    {
+      "id": "REQ_005",
+      "category": "safety",
+      "title": "Fire Department Inspection",
+      "description": "Fire safety inspection and approval for mobile food unit",
+      "required": true,
+      "documents": ["Fire Inspection Certificate"],
+      "validation_criteria": ["All safety equipment approved", "Propane systems certified"]
+    }
+  ],
+  "compliance_rules": [
+    {
+      "rule_id": "RULE_001",
+      "description": "All required documents must be present and current",
+      "impact": "High",
+      "validation": "Document presence and expiration date check"
+    },
+    {
+      "rule_id": "RULE_002", 
+      "description": "Commissary kitchen must be within 25 miles of operating area",
+      "impact": "Medium",
+      "validation": "Distance calculation from commissary address"
+    },
+    {
+      "rule_id": "RULE_003",
+      "description": "Food truck must have valid commercial auto insurance",
+      "impact": "High", 
+      "validation": "Insurance certificate verification"
+    }
+  ]
+}
