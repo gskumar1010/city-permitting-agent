@@ -200,9 +200,18 @@ For production deployments with GPU acceleration and high availability:
 #### Requirements
 
 * OpenShift Cluster 4.17+
-* 2 GPUs with a minimum of 40GB VRAM each
+* ~~2 GPUs with a minimum of 40GB VRAM each~~
 
-#### Deployment Instructions
+#### Deployment Instructions (START HERE)
+
+Make sure you are `oc login`'d to the cluster
+
+0. Deploy the AI Accelerator
+   ```bash
+   git clone https://github.com/redhat-ai-services/ai-accelerator
+   cd ai-accelerator
+   ./bootstrap.sh
+   ```
 
 1. Create a dedicated OpenShift project:
    ```bash
