@@ -3,3 +3,4 @@ kind: Kustomization
 resources:
   - slack-deployment.yaml
   - slack-service.yaml
+  - slack-mcp-secret.yaml
