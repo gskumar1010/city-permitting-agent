@@ -1,4 +1,4 @@
-﻿kind: Deployment
+kind: Deployment
 apiVersion: apps/v1
 metadata:
   name: llamastack-deployment
@@ -75,6 +75,9 @@ spec:
             - name: cache
               mountPath: /.cache
           terminationMessagePolicy: File
+          envFrom:
+            - secretRef:
+                name: maas-env-secret
           image: 'quay.io/redhat-et/llama:vllm-0.2.7'
           args:
             - '--config'
