@@ -100,7 +100,7 @@ INFERENCE_MODEL=llama3.2:3b uv run --with llama-stack llama stack build --templa
 llama-stack-client configure --endpoint http://localhost:8321 --api-key none # need to be in .venv context
 
 # Step 4: Run Llama Stack server container (new terminal)
-## This won't work right now. Need to run this from the UI repo
+## Must do this from the UI repo - currently just called llama-stack (I know, it's confusing)
 streamlit run llama_stack/distribution/ui/app.py
 ```
 
