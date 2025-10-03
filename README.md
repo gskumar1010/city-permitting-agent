@@ -1,5 +1,9 @@
 # Llama Stack Demos on OpenDataHub
 
+Our repo structure is based on the [llama-stack-demos](https://github.com/opendatahub-io/llama-stack-demos) from OpenDataHub
+UI is forked from [llama-stack](https://github.com/MichaelClifford/llama-stack/tree/main)
+   - See the [Containerfile](demos/rag_agentic/frontend/build/Containerfile) for the entry point for building the UI (WIP to switch this to a repo we control)
+
 This repository contains practical examples and demos designed to get you started quickly building AI apps with [Llama Stack](https://github.com/meta-llama/llama-stack) on Kubernetes or OpenShift. Whether you're a cluster admin looking to deploy the right GenAI infrastructure or a developer eager to innovate with AI Agents, the content in this repo should help you get started.
 
 ## 🏗️ Repository Structure
@@ -66,50 +70,56 @@ ollama --version
 # Install uv package manager
 pip install uv
 
+# Install streamlit for non-containerized (faster) development
+uv pip install streamlit
+
 # Clone and setup the project
 cd /path/to/city-permitting-agent
 uv sync
 source .venv/bin/activate
 ```
 
-**2. Quick Setup (Recommended)**
+**2. Manual Local Setup (Step-by-Step)**
 
-Use the provided Makefile command to start everything:
-```bash
-make setup_local
-```
-
-This command will:
-- Start Ollama with the Llama 3.2 3B model
-- Pull and run the Llama Stack distribution container
-- Configure all necessary networking and environment variables
-
-**3. Manual Setup (Step-by-Step)**
-
-If you prefer to understand each component:
+See here for [source](https://github.com/opendatahub-io/llama-stack-demos/blob/main/demos/rag_agentic/frontend/build/README.md)
+and more info on `llama-stack-client` [here](https://llamastack.github.io/docs/getting_started/detailed_tutorial)
 
 ```bash
-# Step 1: Start Ollama with the model (runs in background)
-ollama run llama3.2:3b-instruct-fp16 --keepalive 160m &
+# Step 0: Pull the model if you don't already have it
+ollama pull llama3.2:3b
 
-# Step 2: Create local directory for Llama Stack data
+# Step 1: Create local directory for Llama Stack data (if you don't already have it)
 mkdir -p ~/.llama
 
-# Step 3: Set environment variables
-export INFERENCE_MODEL="meta-llama/Llama-3.2-3B-Instruct"
-export LLAMA_STACK_PORT=8321
-export LLAMA_STACK_ENDPOINT="http://localhost:8321"
+# Step 2: Start Ollama with the model (runs in background)
+ollama run llama3.2:3b --keepalive 60m
 
-# Step 4: Run Llama Stack server container
-podman run -it -p 8321:8321 \
-  -v ~/.llama:/root/.llama \
-  --env INFERENCE_MODEL="$INFERENCE_MODEL" \
-  --env OLLAMA_URL=http://host.containers.internal:11434 \
-  localhost/distribution-ollama:0.2.7 \
-  --port 8321
+# Step 3: Set up local (or reference remote) Llama Stack (new terminal)
+INFERENCE_MODEL=llama3.2:3b uv run --with llama-stack llama stack build --template ollama --image-type venv --run
+*OR*
+llama-stack-client configure --endpoint http://localhost:8321 --api-key none # need to be in .venv context
+
+# Step 4: Run Llama Stack server container (new terminal)
+## This won't work right now. Need to run this from the UI repo
+streamlit run llama_stack/distribution/ui/app.py
 ```
 
-**4. Build and Run MCP Tools Server**
+**2.5 Local Setup with Containers and Remote Llama Stack Endpoint**
+
+```bash
+export INFERENCE_MODEL="meta-llama/Llama-3.2-3B-Instruct" # or whatever model you are using
+export LLAMA_STACK_PORT=8321
+export LLAMA_STACK_ENDPOINT="https://llamastack-server-llama-serve.apps.cluster-j529f.j529f.sandbox2729.opentlc.com" # accurate for the month of Oct 2025
+# Set required environment variables
+export TAVILY_SEARCH_API_KEY="your-search-api-key"  # Optional for web search
+
+make build_ui
+make run_ui
+```
+
+Access the UI at: http://localhost:8501
+
+**3. Build and Run MCP Tools Server**
 
 Model Context Protocol (MCP) servers provide tool integration:
 
@@ -136,23 +146,6 @@ python tests/scripts/0_simple_agent.py
 python tests/scripts/1_simple_agent_with_RAG.py
 ```
 
-**6. Optional: Run Streamlit UI**
-
-For a web interface to interact with your agents:
-
-```bash
-# Build the UI container
-make build_ui
-
-# Set required environment variables
-export TAVILY_SEARCH_API_KEY="your-search-api-key"  # Optional for web search
-
-# Run the Streamlit interface
-make run_ui
-```
-
-Access the UI at: http://localhost:8501
-
 #### Local Stack Architecture
 
 When running locally, your stack consists of:
@@ -171,9 +164,6 @@ podman ps
 
 # Check container logs
 podman logs <container-name>
-
-# Restart services
-make setup_local
 ```
 
 **Python Environment Issues:**
@@ -182,15 +172,6 @@ make setup_local
 rm -rf .venv
 uv sync
 source .venv/bin/activate
-```
-
-**Model Loading Issues:**
-```bash
-# Verify Ollama is running
-ollama list
-
-# Re-pull the model if needed
-ollama pull llama3.2:3b-instruct-fp16
 ```
 
 ### Production Deployment on OpenShift
@@ -273,6 +254,10 @@ python tests/scripts/agent_with_mcp_ocp_slack.py
 make build_llamastack    # Build Llama Stack distribution
 make build_mcp          # Build MCP server
 make build_ui           # Build Streamlit UI
+
+podman tag localhost/streamlit_client quay.io/jefrankl/streamlit_client:latest
+podman push quay.io/jefrankl/streamlit_client:latest
+oc apply -f ./kubernetes/streamlit-client/deployment.yaml
 ```
 
 **Run Services:**

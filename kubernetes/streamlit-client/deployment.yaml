@@ -33,7 +33,7 @@ spec:
         volumeMounts:
         - mountPath: /etc/tls/private
           name: proxy-tls
-      - image: quay.io/jefrankl/cpa-ui:amd64
+      - image: quay.io/jefrankl/streamlit_client:latest
         imagePullPolicy: IfNotPresent
         name: streamlit-client
         ports:
