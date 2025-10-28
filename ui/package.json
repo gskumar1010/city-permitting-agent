@@ -1,0 +1,29 @@
+{
+  "name": "ui",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "npm-run-all --parallel dev:client dev:server",
+    "build": "vite build",
+    "preview": "vite preview",
+    "dev:client": "vite",
+    "dev:server": "node server/src/server.js",
+    "build:client": "vite build",
+    "start": "node server/src/server.js"
+  },
+  "dependencies": {
+    "axios": "^1.12.2",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "express": "^5.1.0",
+    "uuid": "^13.0.0",
+    "vue": "^3.5.22",
+    "pdf-parse": "^1.1.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^6.0.1",
+    "npm-run-all": "^4.1.5",
+    "vite": "^7.1.7"
+  }
+}
