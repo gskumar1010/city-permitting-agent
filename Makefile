@@ -4,14 +4,14 @@ build_llamastack:
 build_mcp:
 	podman build -t mcp_server:latest --platform="linux/amd64" build_mcp
 
-build_ui:
-	podman build -t streamlit_client:latest --platform="linux/amd64" -f demos/rag_agentic/frontend/build/Containerfile .
+# build_ui:
+# 	podman build -t streamlit_client:latest --platform="linux/amd64" -f demos/rag_agentic/frontend/build/Containerfile .
 
-run_ui:
-	 podman run -it -p 8501:8501 --env LLAMA_STACK_ENDPOINT=$(LLAMA_STACK_ENDPOINT) --env TAVILY_SEARCH_API_KEY=$(TAVILY_SEARCH_API_KEY) streamlit_client:latest
+# run_ui:
+# 	 podman run -it -p 8501:8501 --env LLAMA_STACK_ENDPOINT=$(LLAMA_STACK_ENDPOINT) --env TAVILY_SEARCH_API_KEY=$(TAVILY_SEARCH_API_KEY) streamlit_client:latest
 
-run_mcp:
-	python build_mcp/mcp_tools.py
+# run_mcp:
+# 	python build_mcp/mcp_tools.py
 
 run_mcp_container:
 	podman run -it -p 8000:8000 mcp_server
