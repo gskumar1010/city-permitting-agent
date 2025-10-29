@@ -15,20 +15,21 @@ This repository is designed as a **comprehensive demonstration platform** for bu
 ```
 city-permitting-agent/
 ├── kubernetes/              # Complete deployment manifests
-└── images/                  # Documentation assets
+├── ui/                      # City Permitting Agent app source code
+└── docs/                    # Further Documentation assets
 ```
 
 ### Infrastructure Components
 
 The repository includes complete Kubernetes/OpenShift deployment manifests:
 
-- **llama-serve/**: vLLM model servers (GPU-accelerated)
-- **llama-stack/**: Core Llama Stack orchestration server
-- **mcp-servers/**: Model Context Protocol tool servers for Slack, databases, web search, and K8s operations
-- **Vue UI/**: Web UI deployment
-- **Node.js Server/**: Hosting server for web UI and connectivity to Llama Stack
-- **observability/**: Monitoring and metrics collection
-- **kustomize/**: Deployment overlays for different environments
+- **llama-serve**: vLLM model servers (GPU-accelerated)
+- **llama-stack**: Core Llama Stack orchestration server
+- **mcp-servers**: Model Context Protocol tool servers for Slack, databases, web search, and K8s operations
+- **Vue UI**: Web UI deployment
+- **Node.js Server**: Hosting server for web UI and connectivity to Llama Stack
+- **observability**: Monitoring and metrics collection
+- **kustomize**: Deployment overlays for different environments
 
 ## 🛠️ Get Started
 
@@ -270,7 +271,7 @@ curl http://localhost:8321/health  # Check Llama Stack
 curl http://localhost:8000/health  # Check MCP server
 ``` -->
 
-## 💡 Architecture Diagrams
+## 💡 Architecture Diagrams (TO BE UPDATED)
 
 ### City Permitting Agent Architecture
 Comprehensive architecture documentation for the AI-powered permit review system:
