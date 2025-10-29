@@ -183,6 +183,7 @@ Make sure you are `oc login`'d to the cluster
    git clone https://github.com/redhat-ai-services/ai-accelerator
    cd ai-accelerator
    ./bootstrap.sh
+   # Select option number (8) rhoai-stable-2.22 and wait for installation
    ```
 
 1. Create a dedicated OpenShift project:
@@ -192,7 +193,7 @@ Make sure you are `oc login`'d to the cluster
 
 2. Apply the Kubernetes manifests:
    ```bash
-   oc apply -k kubernetes/kustomize/overlay/all-models
+   oc apply -k kubernetes/kustomize/overlay/maas
    ```
    
    This will deploy:
