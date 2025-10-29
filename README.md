@@ -1,10 +1,10 @@
-# Llama Stack Demos on OpenDataHub
+# City Permitting Agent
 
-Our repo structure is based on the [llama-stack-demos](https://github.com/opendatahub-io/llama-stack-demos) from OpenDataHub
-UI is forked from [llama-stack](https://github.com/MichaelClifford/llama-stack/tree/main)
-   - See the [Containerfile](demos/rag_agentic/frontend/build/Containerfile) for the entry point for building the UI (WIP to switch this to a repo we control)
+The City Permitting AI Agent (CPA) leverages artificial intelligence to streamline a laborious, but critical governmental process by automatically reviewing submitted forms for completeness and accuracy before they reach human officers. CPA has ingested a trove of official municipal and business-specific requirements which are necessary to issue a permit for a new establishment (such as a food truck). This source of knowledge will be used to pre-screen new permit requests.
 
-This repository contains practical examples and demos designed to get you started quickly building AI apps with [Llama Stack](https://github.com/meta-llama/llama-stack) on Kubernetes or OpenShift. Whether you're a cluster admin looking to deploy the right GenAI infrastructure or a developer eager to innovate with AI Agents, the content in this repo should help you get started.
+Using a scorecard mechanism, the system highlights errors, missing information, and compliance gaps so that the requester is given the greatest chance of permit issuance upon official review. Once an optimal score is achieved, the system maintains a human-in-the-loop approach by submitting to a real human to ensure accountability and oversight. The solution enhances operational efficiency, reduces bottlenecks, and improves citizen experience by accelerating the turnaround time for permits without compromising regulatory compliance.
+
+Our demo focuses on Food Truck permits in the city of Denver, Colorado as this is a real-life example, but the concept is easily extended to city permits of all types across the world.
 
 ## 🏗️ Repository Structure
 
@@ -14,38 +14,30 @@ This repository is designed as a **comprehensive demonstration platform** for bu
 
 ```
 city-permitting-agent/
-├── demos/                    # Three main demo patterns
-│   ├── a2a_llama_stack/     # Agent-to-Agent communication
-│   ├── rag_agentic/         # RAG + Agent capabilities  
-│   └── rag_eval/            # Evaluation framework
 ├── kubernetes/              # Complete deployment manifests
-├── tests/                   # Evaluation and testing scripts
-├── distribution/            # Container build configurations
-└── images/                  # Documentation assets
+├── ui/                      # City Permitting Agent app source code
+└── docs/                    # Further Documentation assets
 ```
-
-### Three Demo Patterns
-
-1. **A2A (Agent-to-Agent)** - Multi-agent systems where agents communicate and coordinate with each other through standardized message passing
-2. **RAG Agentic** - Combines retrieval-augmented generation with agent capabilities, integrating Milvus vector database and Streamlit frontend
-3. **Evaluation Framework** - Comprehensive testing and benchmarking of AI agent performance, including tool calling accuracy and response quality metrics
 
 ### Infrastructure Components
 
 The repository includes complete Kubernetes/OpenShift deployment manifests:
 
-- **llama-serve/**: vLLM model servers (GPU-accelerated)
-- **llama-stack/**: Core Llama Stack orchestration server
-- **mcp-servers/**: Model Context Protocol tool servers for GitHub, Slack, databases, web search, and K8s operations
-- **streamlit-client/**: Web UI deployment
-- **observability/**: Monitoring and metrics collection
-- **kustomize/**: Deployment overlays for different environments
+- **llama-serve**: vLLM model servers (GPU-accelerated)
+- **llama-stack**: Core Llama Stack orchestration server
+- **mcp-servers**: Model Context Protocol tool servers for Slack, databases, web search, and K8s operations
+- **Vue UI**: Web UI deployment
+- **Node.js Server**: Hosting server for web UI and connectivity to Llama Stack
+- **observability**: Monitoring and metrics collection
+- **kustomize**: Deployment overlays for different environments
 
 ## 🛠️ Get Started
 
 ### Local Development Setup
 
-For local development and testing, you can run the complete Llama Stack locally using Ollama and Podman. This is perfect for development, experimentation, and learning.
+Under development
+
+<!-- For local development and testing, you can run the complete Llama Stack locally using Ollama and Podman. This is perfect for development, experimentation, and learning.
 
 #### Prerequisites
 
@@ -77,9 +69,9 @@ uv pip install streamlit
 cd /path/to/city-permitting-agent
 uv sync
 source .venv/bin/activate
-```
+``` -->
 
-**2. Manual Local Setup (Step-by-Step)**
+<!-- **2. Manual Local Setup (Step-by-Step)**
 
 See here for [source](https://github.com/opendatahub-io/llama-stack-demos/blob/main/demos/rag_agentic/frontend/build/README.md)
 and more info on `llama-stack-client` [here](https://llamastack.github.io/docs/getting_started/detailed_tutorial)
@@ -172,7 +164,7 @@ podman logs <container-name>
 rm -rf .venv
 uv sync
 source .venv/bin/activate
-```
+``` -->
 
 ### Production Deployment on OpenShift
 
@@ -192,6 +184,7 @@ Make sure you are `oc login`'d to the cluster
    git clone https://github.com/redhat-ai-services/ai-accelerator
    cd ai-accelerator
    ./bootstrap.sh
+   # Select option number (8) rhoai-stable-2.22 and wait for installation
    ```
 
 1. Create a dedicated OpenShift project:
@@ -201,7 +194,7 @@ Make sure you are `oc login`'d to the cluster
 
 2. Apply the Kubernetes manifests:
    ```bash
-   oc apply -k kubernetes/kustomize/overlay/all-models
+   oc apply -k kubernetes/kustomize/overlay/maas
    ```
    
    This will deploy:
@@ -211,7 +204,7 @@ Make sure you are `oc login`'d to the cluster
    - Streamlit web interface
    - Observability and monitoring stack
 
-## 🔄 Development Workflow
+<!-- ## 🔄 Development Workflow
 
 Once your local stack is running, you can develop and test AI applications:
 
@@ -245,9 +238,9 @@ python tests.py --model-size 3B --num-tools 23
 python tests/scripts/0_simple_agent.py
 python tests/scripts/1_simple_agent_with_RAG.py
 python tests/scripts/agent_with_mcp_ocp_slack.py
-```
+``` -->
 
-### Common Development Tasks
+<!-- ### Common Development Tasks
 
 **Build Containers:**
 ```bash
@@ -276,9 +269,9 @@ make setup_local
 podman ps
 curl http://localhost:8321/health  # Check Llama Stack
 curl http://localhost:8000/health  # Check MCP server
-```
+``` -->
 
-## 💡 Architecture Diagrams
+## 💡 Architecture Diagrams (TO BE UPDATED)
 
 ### City Permitting Agent Architecture
 Comprehensive architecture documentation for the AI-powered permit review system:
@@ -289,7 +282,7 @@ Comprehensive architecture documentation for the AI-powered permit review system
 ### Development & Deployment Architectures
 Complete development-to-production flow showing how local development scales to enterprise deployment:
 - **[System Overview Diagram](./docs/system-overview-diagram.md)** - Full development-to-production flow
-- **[Local Development Architecture](./docs/local-development-architecture.md)** - Local stack components and ports
+<!-- - **[Local Development Architecture](./docs/local-development-architecture.md)** - Local stack components and ports -->
 - **[OpenShift Production Architecture](./docs/openshift-production-architecture.md)** - Production deployment details
 
 📚 **[View All Documentation](./docs/)** - Complete documentation index with guides and architecture diagrams
@@ -299,6 +292,6 @@ The below diagram shows the secure Llama Stack application architecture deployed
 
 ![Architecture Diagram](./images/architecture-diagram.jpg)
 
----
+<!-- ---
 
-We're excited to see what you build with Llama Stack! If you have any questions or feedback, please don't hesitate to open an [issue](https://github.com/opendatahub-io/llama-stack-demos/issues). Happy building! 🎉
+We're excited to see what you build with Llama Stack! If you have any questions or feedback, please don't hesitate to open an [issue](https://github.com/opendatahub-io/llama-stack-demos/issues). Happy building! 🎉 -->

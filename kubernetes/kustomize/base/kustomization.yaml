@@ -3,12 +3,7 @@ kind: Kustomization
 resources:
   - ../../namespace
   - ../../llama-stack
-  #- ../../safety-model # Requires GPUs
-  - ../../streamlit-client
   - ../../notebooks
 
   # mcp-servers resources
-  # - ../../mcp-servers/ansible-mcp
-  # - ../../mcp-servers/custom-mcp
-  # - ../../mcp-servers/github-mcp
   - ../../mcp-servers/openshift-mcp
