@@ -19,6 +19,13 @@ providers:
       max_tokens: 128000
       api_token: ${env.LLAMA_TOKEN}
       tls_verify: false
+  - provider_id: llama-4
+      provider_type: "remote::vllm"
+      config:
+        url: "https://llama-4-scout-17b-16e-w4a16-maas-apicast-production.apps.prod.rhoai.rh-aiservices-bu.com:443/v1"
+        max_tokens: 110000
+        api_token: ${env.MAAS_API_TOKEN}
+        tls_verify: true    
   - provider_id: sentence-transformers
     provider_type: inline::sentence-transformers
     config: {}
@@ -102,6 +109,11 @@ models:
   model_id: ${env.LLAMA3B_MODEL}
   provider_id: llama-3b
   model_type: llm
+- metadata: {}
+  model_id: llama-4-scout-17b-16e-w4a16
+  provider_id: llama-4
+  provider_model_id: llama-4-scout-17b-16e-w4a16
+  model_type: llm  
 - metadata:
     embedding_dimension: 384
   model_id: all-MiniLM-L6-v2
