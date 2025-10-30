@@ -192,7 +192,9 @@ Make sure you are `oc login`'d to the cluster
    oc new-project llama-serve
    ```
 
-2. Apply the Kubernetes manifests:
+2. Navigate to the following **[📋 Google Doc](https://docs.google.com/document/d/1Bh4Oof4vLWo6f2vEuh8Erqma2SVMeMknYyu256mEe-8/edit?usp=sharing)** and create the MaaS secret and the Slack Secret
+
+3. Apply the Kubernetes manifests:
    ```bash
    oc apply -k kubernetes/kustomize/overlay/maas
    ```
