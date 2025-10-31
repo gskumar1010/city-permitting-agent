@@ -1343,35 +1343,115 @@ button.secondary {
   filter: brightness(0) invert(1);
 }
 
-.actions--inline {
-  display: flex;
-  justify-content: flex-end;
+
+.document-section {
+  padding: 0;
+  gap: 2.2rem;
+  background: transparent;
 }
 
-
-.document-library--intro {
+.document-hero {
+  position: relative;
+  overflow: hidden;
+  border-radius: 1.2rem;
+  padding: clamp(1.8rem, 3vw, 2.6rem);
+  background: linear-gradient(135deg, rgba(15, 44, 83, 0.92), rgba(37, 99, 235, 0.82));
+  color: #f8fafc;
+  box-shadow: 0 32px 72px -36px rgba(15, 44, 83, 0.6);
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
-  gap: 1rem;
+  gap: 2rem;
 }
 
-.document-library__summary {
-  font-size: 0.95rem;
-  color: #475569;
+.document-hero::after {
+  content: '';
+  position: absolute;
+  inset: -20% auto auto 50%;
+  width: 380px;
+  height: 380px;
+  background: radial-gradient(circle, rgba(96, 165, 250, 0.45), transparent 68%);
+  opacity: 0.5;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.document-hero__copy {
+  position: relative;
+  max-width: 560px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  z-index: 1;
+}
+
+.document-hero__eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  font-size: 0.75rem;
+  font-weight: 700;
+  opacity: 0.8;
+}
+
+.document-hero__copy h2 {
+  margin: 0;
+  font-size: clamp(1.75rem, 3vw, 2.1rem);
+  font-weight: 700;
+}
+
+.document-hero__copy p {
+  margin: 0;
+  color: rgba(241, 245, 249, 0.92);
+  line-height: 1.6;
+  font-size: 1rem;
+}
+
+.document-hero__stats {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 1rem;
+  min-width: 240px;
+  z-index: 1;
+}
+
+.document-stat {
+  background: rgba(15, 23, 42, 0.25);
+  border: 1px solid rgba(248, 250, 252, 0.25);
+  backdrop-filter: blur(12px);
+  padding: 1rem 1.2rem;
+  border-radius: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  box-shadow: inset 0 0 0 1px rgba(148, 163, 197, 0.15);
+}
+
+.document-stat__value {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: #f8fafc;
+}
+
+.document-stat__label {
+  font-size: 0.75rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(226, 232, 240, 0.76);
 }
 
 .document-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 1.75rem;
+  gap: 1.9rem;
   position: relative;
 }
 
 .document-card {
   --accent-primary: #2563eb;
   --accent-secondary: #60a5fa;
+  position: relative;
   display: flex;
   flex-direction: column;
   border-radius: 1.1rem;
@@ -1382,9 +1462,23 @@ button.secondary {
   transition: transform 0.25s ease, box-shadow 0.25s ease;
 }
 
+.document-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0), rgba(148, 163, 184, 0.12));
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
 .document-card:hover {
   transform: translateY(-6px) scale(1.01);
   box-shadow: 0 38px 72px -32px rgba(15, 23, 42, 0.55);
+}
+
+.document-card:hover::before {
+  opacity: 1;
 }
 
 .document-card__thumb {
@@ -1449,6 +1543,16 @@ button.secondary {
   color: #7c8294;
 }
 
+.document-card__details span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.4rem 0.7rem;
+  border-radius: 0.65rem;
+  background: rgba(148, 163, 184, 0.18);
+  color: #475569;
+}
+
 .document-card__download {
   align-self: flex-start;
   background: var(--accent-primary);
@@ -1464,6 +1568,11 @@ button.secondary {
   transition: background 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
 }
 
+.document-card__download::after {
+  content: '↗';
+  font-size: 0.95rem;
+}
+
 .document-card__download:hover {
   background: var(--accent-secondary);
   transform: translateY(-3px);
@@ -1473,4 +1582,15 @@ button.secondary {
 .document-card__download:focus-visible {
   outline: 3px solid rgba(96, 165, 250, 0.85);
   outline-offset: 2px;
+}
+
+@media (max-width: 720px) {
+  .document-hero {
+    flex-direction: column;
+  }
+
+  .document-hero__stats {
+    width: 100%;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  }
 }

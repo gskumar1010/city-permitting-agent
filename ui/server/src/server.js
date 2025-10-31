@@ -35,6 +35,7 @@ const userFilesRoot = path.join(publicPath, 'users');
 fs.mkdirSync(userFilesRoot, { recursive: true });
 
 app.use('/users', express.static(path.join(publicPath, 'users')));
+const documentLibraryRoot = path.join(publicPath, 'documents');
 
 const DOCUMENT_LIBRARY_METADATA = [
   {
@@ -668,12 +669,12 @@ app.get('/api/evaluations/:sessionId', asyncHandler(async (req, res) => {
 }));
 
 app.get('/api/document-library', asyncHandler(async (_req, res) => {
-  if (!fs.existsSync(publicPath)) {
+  if (!fs.existsSync(documentLibraryRoot)) {
     return res.json({ documents: [] });
   }
   const seen = new Set();
   const results = [];
-  const stack = [{ dir: publicPath, relative: '' }];
+  const stack = [{ dir: documentLibraryRoot, relative: '' }];
 
   while (stack.length) {
     const { dir, relative } = stack.pop();
@@ -706,7 +707,7 @@ app.get('/api/document-library', asyncHandler(async (_req, res) => {
         name: entry.name,
         title: meta?.title ?? titleFromFilename(entry.name),
         description: meta?.description ?? DEFAULT_LIBRARY_META.description,
-        url: `/${normalizedPath}`,
+        url: `/documents/${normalizedPath}`,
         sizeBytes: stats.size,
         modifiedAt: stats.mtime.toISOString(),
         relativePath: normalizedPath,

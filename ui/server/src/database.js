@@ -50,6 +50,29 @@ db.exec(`
 
   CREATE INDEX IF NOT EXISTS idx_documents_session_created
     ON documents(session_id, created_at, id);
+
+  CREATE TABLE IF NOT EXISTS applications (
+    session_id TEXT PRIMARY KEY,
+    application_json TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(session_id) REFERENCES sessions(session_id) ON DELETE CASCADE
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_applications_updated
+    ON applications(updated_at);
+
+  CREATE TABLE IF NOT EXISTS evaluations (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    session_id TEXT NOT NULL,
+    application_json TEXT NOT NULL,
+    evaluation_json TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(session_id) REFERENCES sessions(session_id) ON DELETE CASCADE
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_evaluations_session_created
+    ON evaluations(session_id, created_at, id);
 `);
 
 const upsertSessionStmt = db.prepare(`
@@ -106,6 +129,34 @@ const selectDocumentsStmt = db.prepare(`
 `);
 
 const deleteDocumentStmt = db.prepare('DELETE FROM documents WHERE id = ? AND session_id = ?');
+
+const upsertApplicationStmt = db.prepare(`
+  INSERT INTO applications (session_id, application_json, created_at, updated_at)
+  VALUES (@sessionId, @applicationJson, @timestamp, @timestamp)
+  ON CONFLICT(session_id) DO UPDATE SET
+    application_json = excluded.application_json,
+    updated_at = excluded.updated_at
+`);
+
+const selectApplicationStmt = db.prepare(`
+  SELECT session_id, application_json, created_at, updated_at
+  FROM applications
+  WHERE session_id = ?
+`);
+
+const deleteApplicationStmt = db.prepare('DELETE FROM applications WHERE session_id = ?');
+
+const insertEvaluationStmt = db.prepare(`
+  INSERT INTO evaluations (session_id, application_json, evaluation_json, created_at)
+  VALUES (@sessionId, @applicationJson, @evaluationJson, @timestamp)
+`);
+
+const selectEvaluationsStmt = db.prepare(`
+  SELECT id, session_id, application_json, evaluation_json, created_at
+  FROM evaluations
+  WHERE session_id = ?
+  ORDER BY created_at, id
+`);
 
 const replaceMessages = db.transaction((sessionId, messages) => {
   deleteMessagesStmt.run(sessionId);
@@ -218,5 +269,66 @@ export const database = {
   },
   deleteDocument(sessionId, documentId) {
     deleteDocumentStmt.run(documentId, sessionId);
+  },
+  saveApplication(sessionId, application) {
+    const timestamp = new Date().toISOString();
+    upsertApplicationStmt.run({
+      sessionId,
+      applicationJson: JSON.stringify(application ?? {}),
+      timestamp,
+    });
+  },
+  getApplication(sessionId) {
+    const row = selectApplicationStmt.get(sessionId);
+    if (!row) {
+      return null;
+    }
+    let application = null;
+    try {
+      application = JSON.parse(row.application_json);
+    } catch (_error) {
+      application = null;
+    }
+    return {
+      sessionId: row.session_id,
+      application,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    };
+  },
+  deleteApplication(sessionId) {
+    deleteApplicationStmt.run(sessionId);
+  },
+  recordEvaluation(sessionId, { application, evaluation }) {
+    const timestamp = new Date().toISOString();
+    insertEvaluationStmt.run({
+      sessionId,
+      applicationJson: JSON.stringify(application ?? {}),
+      evaluationJson: JSON.stringify(evaluation ?? {}),
+      timestamp,
+    });
+  },
+  getEvaluations(sessionId) {
+    return selectEvaluationsStmt.all(sessionId).map((row) => {
+      let application = null;
+      let evaluation = null;
+      try {
+        application = JSON.parse(row.application_json);
+      } catch (_error) {
+        application = null;
+      }
+      try {
+        evaluation = JSON.parse(row.evaluation_json);
+      } catch (_error) {
+        evaluation = null;
+      }
+      return {
+        id: row.id,
+        sessionId: row.session_id,
+        application,
+        evaluation,
+        createdAt: row.created_at,
+      };
+    });
   },
 };

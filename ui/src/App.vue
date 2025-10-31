@@ -22,7 +22,7 @@
           <button :class="['nav-tab', activeTab === 'submit' ? 'active' : '']" @click="activeTab = 'submit'">📝 Submit Application</button>
           <button :class="['nav-tab', activeTab === 'questions' ? 'active' : '']" @click="activeTab = 'questions'">💬 Ask Questions</button>
           <button :class="['nav-tab', activeTab === 'history' ? 'active' : '']" @click="activeTab = 'history'">📊 Evaluation History</button>
-          <button :class="['nav-tab', activeTab === 'library' ? 'active' : '']" @click="activeTab = 'library'">📂 Document Downloads</button>
+          <button :class="['nav-tab', activeTab === 'library' ? 'active' : '']" @click="activeTab = 'library'">📂 Reference Documents</button>
         </div>
       </nav>
     </header>
@@ -476,41 +476,61 @@
             </div>
           </section>
 
-          <section v-else-if="activeTab === 'library'" class="tab-content">
-            <h2>Document Downloads</h2>
-            <p>Download reference materials required for Denver mobile food permitting.</p>
+          <section v-else-if="activeTab === 'library'" class="tab-content document-section">
             <div v-if="libraryLoading" class="alert info">Loading documents…</div>
             <div v-else-if="libraryError" class="alert error">{{ libraryError }}</div>
-            <div v-else-if="libraryCards.length" class="document-grid">
-              <article
-                v-for="doc in libraryCards"
-                :key="doc.relativePath"
-                class="document-card"
-                :style="{ '--accent-primary': doc.accentPrimary, '--accent-secondary': doc.accentSecondary }"
-              >
-                <div class="document-card__thumb">
-                  <img :src="doc.icon" :alt="`${doc.title} icon`" class="document-card__icon" />
-                  <span class="document-card__tag">{{ doc.tag }}</span>
+            <template v-else-if="libraryCards.length">
+              <header class="document-hero">
+                <div class="document-hero__copy">
+                  <span class="document-hero__eyebrow">Reference Library</span>
+                  <h2>Document Downloads</h2>
+                  <p>
+                    Download the official packets, checklists, and guides that Denver Public Health and partner
+                    agencies require for food truck permitting.
+                  </p>
                 </div>
-                <div class="document-card__body">
-                  <h3>{{ doc.title }}</h3>
-                  <p>{{ doc.description }}</p>
-                  <div class="document-card__details">
-                    <span>{{ doc.extension || 'PDF' }}</span>
-                    <span>{{ formatFileSize(doc.sizeBytes) }}</span>
-                    <span>{{ formatUploadedAt(doc.modifiedAt) }}</span>
+                <div class="document-hero__stats">
+                  <div class="document-stat">
+                    <span class="document-stat__value">{{ libraryStats.total }}</span>
+                    <span class="document-stat__label">Documents</span>
                   </div>
-                  <a
-                    class="document-card__download"
-                    :href="doc.url"
-                    target="_blank"
-                    rel="noopener"
-                  >
-                    Download
-                  </a>
+                  <div class="document-stat" v-if="libraryLastUpdatedDisplay">
+                    <span class="document-stat__value">{{ libraryLastUpdatedDisplay }}</span>
+                    <span class="document-stat__label">Last Updated</span>
+                  </div>
                 </div>
-              </article>
-            </div>
+              </header>
+              <div class="document-grid">
+                <article
+                  v-for="doc in libraryCards"
+                  :key="doc.relativePath"
+                  class="document-card"
+                  :style="{ '--accent-primary': doc.accentPrimary, '--accent-secondary': doc.accentSecondary }"
+                >
+                  <div class="document-card__thumb">
+                    <img :src="doc.icon" :alt="`${doc.title} icon`" class="document-card__icon" />
+                    <span class="document-card__tag">{{ doc.tag }}</span>
+                  </div>
+                  <div class="document-card__body">
+                    <h3>{{ doc.title }}</h3>
+                    <p>{{ doc.description }}</p>
+                    <div class="document-card__details">
+                      <span>{{ doc.extension || 'PDF' }}</span>
+                      <span>{{ formatFileSize(doc.sizeBytes) || '—' }}</span>
+                      <span>{{ formatUploadedAt(doc.modifiedAt) || '—' }}</span>
+                    </div>
+                    <a
+                      class="document-card__download"
+                      :href="doc.url"
+                      target="_blank"
+                      rel="noopener"
+                    >
+                      Download
+                    </a>
+                  </div>
+                </article>
+              </div>
+            </template>
             <div v-else class="alert info">No reference documents found.</div>
           </section>
 
@@ -982,6 +1002,24 @@ const libraryCards = computed(() =>
     accentPrimary: doc.accentPrimary || '#2563eb',
     accentSecondary: doc.accentSecondary || '#60a5fa',
   })),
+);
+const libraryStats = computed(() => {
+  const docs = documentLibrary.value;
+  if (!docs.length) {
+    return { total: 0, lastUpdated: '' };
+  }
+  const latestDoc = docs.reduce((latest, current) => {
+    const latestTime = latest ? new Date(latest.modifiedAt || latest.uploadedAt || 0).getTime() : 0;
+    const currentTime = new Date(current.modifiedAt || current.uploadedAt || 0).getTime();
+    return currentTime > latestTime ? current : latest;
+  }, null);
+  return {
+    total: docs.length,
+    lastUpdated: latestDoc?.modifiedAt || latestDoc?.uploadedAt || '',
+  };
+});
+const libraryLastUpdatedDisplay = computed(() =>
+  libraryStats.value.lastUpdated ? formatUploadedAt(libraryStats.value.lastUpdated) : '',
 );
 const activeTab = ref('submit');
 
