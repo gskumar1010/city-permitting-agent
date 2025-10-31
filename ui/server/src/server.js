@@ -2,19 +2,224 @@ import express from 'express';
 import cors from 'cors';
 import pdf from 'pdf-parse/lib/pdf-parse.js';
 import { v4 as uuidv4 } from 'uuid';
+import multer from 'multer';
 import { config } from './config.js';
 import { createLlamaStackClient } from './llamaStackClient.js';
+import { database } from './database.js';
 import path from 'node:path';
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import { createRequire } from 'node:module';
+
+const require = createRequire(import.meta.url);
+
+try {
+  const pdfjs = require('pdf-parse/lib/pdf.js/v1.10.100/build/pdf.js');
+  if (pdfjs?.PDFJS?.VERBOSITY_LEVELS?.errors !== undefined) {
+    pdfjs.PDFJS.verbosity = pdfjs.PDFJS.VERBOSITY_LEVELS.errors;
+  }
+} catch (_error) {
+  // Silently ignore configuration issues; parsing still proceeds with default verbosity.
+}
 
 const app = express();
 app.use(cors());
 app.use(express.json({ limit: '25mb' }));
 app.disable('x-powered-by');
 
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const distPath = path.resolve(__dirname, '../../dist');
+const publicPath = path.resolve(__dirname, '../../public');
+const userFilesRoot = path.join(publicPath, 'users');
+fs.mkdirSync(userFilesRoot, { recursive: true });
+
+app.use('/users', express.static(path.join(publicPath, 'users')));
+const documentLibraryRoot = path.join(publicPath, 'documents');
+
+const DOCUMENT_LIBRARY_METADATA = [
+  {
+    pattern: /planreviewpacket/i,
+    title: 'Mobile Retail Food Establishment Plan Review Packet (2023)',
+    description:
+      'Official packet with every checklist, form, and reference needed to launch a mobile retail food business in Denver. Follow each section to prepare a complete submission for the Department of Public Health & Environment.',
+    accentPrimary: '#2563eb',
+    accentSecondary: '#60a5fa',
+    tag: 'Application Packet',
+  },
+  {
+    pattern: /affidavit-of-commissary/i,
+    title: 'Affidavit of Commissary',
+    description:
+      'Required form that documents your commissary agreement and daily servicing plan. Submit the signed affidavit with your permit to verify compliance with Denver commissary requirements.',
+    accentPrimary: '#7c3aed',
+    accentSecondary: '#c084fc',
+    tag: 'Form',
+  },
+  {
+    pattern: /fire-department-food-truck-inspection/i,
+    title: 'Denver Fire Department Food Truck Inspection Checklist',
+    description:
+      'Pre-inspection checklist covering fire suppression, fuel safety, and electrical standards. Walk through every item before the Denver Fire Department site visit to stay inspection-ready.',
+    accentPrimary: '#dc2626',
+    accentSecondary: '#fb7185',
+    tag: 'Checklist',
+  },
+  {
+    pattern: /food-zup-exemption/i,
+    title: 'Mobile Food Vendor ZUP Exemption Guidance',
+    description:
+      'Explains when a Zoning Use Permit (ZUP) is not required for mobile food vendors in Denver. Review the exemption scenarios to understand where you can operate without additional zoning approvals.',
+    accentPrimary: '#0f766e',
+    accentSecondary: '#34d399',
+    tag: 'Guidance',
+  },
+  {
+    pattern: /foodsafetysystemtoolkit/i,
+    title: 'Food Safety System Toolkit (2023)',
+    description:
+      'Template-driven toolkit for designing food safety procedures and HACCP-style controls. Use the worksheets to align your team on monitoring, corrective actions, and record keeping.',
+    accentPrimary: '#0ea5e9',
+    accentSecondary: '#38bdf8',
+    tag: 'Toolkit',
+  },
+  {
+    pattern: /how-to-apply-for-a-mobile-food-truck-permit-english/i,
+    title: 'How to Apply for a Mobile Food Truck Permit',
+    description:
+      'Illustrated guide that walks you through each screen of the online mobile food truck permit application. Includes tips on account setup, document uploads, and post-submission expectations.',
+    accentPrimary: '#f97316',
+    accentSecondary: '#fbbf24',
+    tag: 'Guide',
+  },
+  {
+    pattern: /ihh_poster/i,
+    title: 'Illness & Hand Hygiene Poster',
+    description:
+      'Printable poster highlighting employee illness reporting and handwashing reminders. Display inside the unit near sinks to reinforce exclusion and hygiene policies.',
+    accentPrimary: '#14b8a6',
+    accentSecondary: '#5eead4',
+    tag: 'Poster',
+  },
+  {
+    pattern: /new-process-for-mobile-food-truck-permits/i,
+    title: 'New Process for Mobile Food Truck Permits',
+    description:
+      'One-page overview of Denver’s streamlined mobile food truck permitting workflow. Compare old and new steps to plan timelines and gather the right documentation.',
+    accentPrimary: '#6366f1',
+    accentSecondary: '#a855f7',
+    tag: 'Overview',
+  },
+  {
+    pattern: /renewal_mobileretailfoodestablishmentpacket/i,
+    title: 'Mobile Retail Food Establishment Renewal Packet (2023)',
+    description:
+      'Complete packet for renewing an existing mobile retail food establishment license. Use it to confirm ongoing compliance and submit annual updates to your plan.',
+    accentPrimary: '#9333ea',
+    accentSecondary: '#c084fc',
+    tag: 'Renewal Packet',
+  },
+];
+
+const findDocumentMeta = (name) => {
+  if (!name) return null;
+  const normalized = name.toLowerCase();
+  return DOCUMENT_LIBRARY_METADATA.find((entry) => entry.pattern.test(normalized)) || null;
+};
+
+const titleFromFilename = (filename) => {
+  if (!filename) return 'Document';
+  return filename
+    .replace(/\.[^/.]+$/, '')
+    .replace(/[_-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .replace(/\b\w/g, (c) => c.toUpperCase())
+    .trim();
+};
+
+const DEFAULT_LIBRARY_META = {
+  description: 'Reference document supporting the Denver mobile food permitting workflow.',
+  accentPrimary: '#2563eb',
+  accentSecondary: '#60a5fa',
+  tag: 'Reference',
+};
+
+const sanitizePathSegment = (value) => (value || '').replace(/[^a-zA-Z0-9-_]/g, '');
+const toPublicRelativePath = (filePath) => path.relative(publicPath, filePath).split(path.sep).filter(Boolean).join('/');
+const buildDocumentPayload = (record) => {
+  const relativePath = (record.relativePath || '').replace(/\\/g, '/').replace(/^\/+/, '');
+  return {
+    id: record.id,
+    sessionId: record.sessionId,
+    documentType: record.documentType,
+    originalName: record.originalName,
+    mimeType: record.mimeType,
+    sizeBytes: record.sizeBytes,
+    uploadedAt: record.createdAt,
+    url: `/${relativePath}`
+  };
+};
+
+const removeFile = (filePath) => {
+  if (!filePath) return;
+  fs.unlink(filePath, (error) => {
+    if (error && error.code !== 'ENOENT') {
+      console.warn(`Failed to delete file ${filePath}:`, error);
+    }
+  });
+};
+
+const removeSessionFiles = (sessionId) => {
+  const sanitized = sanitizePathSegment(sessionId);
+  if (!sanitized) return;
+  const sessionDir = path.join(userFilesRoot, sanitized);
+  fs.rm(sessionDir, { recursive: true, force: true }, (error) => {
+    if (error && error.code !== 'ENOENT') {
+      console.warn(`Failed to clean uploads for session ${sessionId}:`, error);
+    }
+  });
+};
+
+const uploadStorage = multer.diskStorage({
+  destination: (req, _file, cb) => {
+    const sessionId = typeof req.body?.sessionId === 'string' ? req.body.sessionId.trim() : '';
+    const sanitized = sanitizePathSegment(sessionId);
+    if (!sanitized) {
+      const error = new Error('A valid sessionId is required.');
+      error.code = 'INVALID_SESSION_ID';
+      return cb(error);
+    }
+    const targetDir = path.join(userFilesRoot, sanitized);
+    fs.mkdirSync(targetDir, { recursive: true });
+    cb(null, targetDir);
+  },
+  filename: (_req, file, cb) => {
+    const ext = path.extname(file.originalname || '').toLowerCase();
+    const baseName = path.basename(file.originalname || 'document', ext).replace(/[^a-zA-Z0-9-_]/g, '_') || 'document';
+    const timestamp = Date.now();
+    cb(null, `${baseName.slice(0, 60)}-${timestamp}${ext}`);
+  },
+});
+
+const upload = multer({
+  storage: uploadStorage,
+  limits: { fileSize: 25 * 1024 * 1024 },
+});
+
+const uploadSingleDocument = (req, res, next) => {
+  upload.single('file')(req, res, (error) => {
+    if (error) {
+      const status = error.code === 'LIMIT_FILE_SIZE' ? 413 : 400;
+      const message = error.code === 'LIMIT_FILE_SIZE'
+        ? 'File is too large. Maximum upload size is 25 MB.'
+        : error.message || 'Upload failed.';
+      return res.status(status).json({ message });
+    }
+    next();
+  });
+};
+
+
 const defaultLlamaUrl = (() => {
   try {
     return new URL(config.llamaStack.baseUrl || 'http://localhost:8321');
@@ -24,6 +229,34 @@ const defaultLlamaUrl = (() => {
 })();
 
 const sessions = new Map();
+
+const getSessionFromStore = (sessionId) => {
+  if (!sessionId) {
+    return null;
+  }
+  if (sessions.has(sessionId)) {
+    return sessions.get(sessionId);
+  }
+  const persisted = database.getSession(sessionId);
+  if (!persisted) {
+    return null;
+  }
+  const baseUrl = persisted.baseUrl || defaultLlamaUrl.origin || defaultLlamaUrl.toString();
+  const session = {
+    sessionId: persisted.sessionId,
+    baseUrl,
+    vectorDbId: persisted.vectorDbId,
+    client: createLlamaStackClient(baseUrl),
+    messages: Array.isArray(persisted.messages) && persisted.messages.length > 0
+      ? persisted.messages.map((message) => ({
+        role: message.role,
+        content: message.content,
+      }))
+      : buildSessionPrompt(),
+  };
+  sessions.set(sessionId, session);
+  return session;
+};
 
 
 const MODEL_ID = 'llama-4-scout-17b-16e-w4a16';
@@ -328,6 +561,8 @@ const performInitialization = async (params = {}, notify) => {
       messages: buildSessionPrompt(),
     };
     sessions.set(sessionId, session);
+    database.saveSession({ sessionId, baseUrl, vectorDbId });
+    database.saveMessages(sessionId, session.messages);
 
     pushLog(logs, 'success', 'Initialization complete.', notify);
 
@@ -372,6 +607,196 @@ app.get('/api/initialize-agent/stream', asyncHandler(async (req, res) => {
   }
 }));
 
+
+
+app.post('/api/application', asyncHandler(async (req, res) => {
+  const sessionId = typeof req.body?.sessionId === 'string' ? req.body.sessionId.trim() : '';
+  const application = req.body?.application;
+
+  if (!sessionId) {
+    return res.status(400).json({ message: 'sessionId is required.' });
+  }
+  if (application === null || application === undefined || typeof application !== 'object') {
+    return res.status(400).json({ message: 'application is required.' });
+  }
+
+  const sessionRecord = database.getSession(sessionId);
+  if (!sessionRecord) {
+    return res.status(404).json({ message: 'Session not found.' });
+  }
+
+  database.saveApplication(sessionId, application);
+  const saved = database.getApplication(sessionId);
+  res.json({
+    status: 'ok',
+    updatedAt: saved?.updatedAt || new Date().toISOString(),
+  });
+}));
+
+app.get('/api/application/:sessionId', asyncHandler(async (req, res) => {
+  const sessionId = typeof req.params.sessionId === 'string' ? req.params.sessionId.trim() : '';
+  if (!sessionId) {
+    return res.status(400).json({ message: 'sessionId is required.' });
+  }
+
+  const sessionRecord = database.getSession(sessionId);
+  if (!sessionRecord) {
+    return res.status(404).json({ message: 'Session not found.' });
+  }
+
+  const saved = database.getApplication(sessionId);
+  if (!saved || !saved.application) {
+    return res.status(404).json({ message: 'Saved application not found.' });
+  }
+
+  res.json({
+    application: saved.application,
+    updatedAt: saved.updatedAt,
+  });
+}));
+
+app.get('/api/evaluations/:sessionId', asyncHandler(async (req, res) => {
+  const sessionId = typeof req.params.sessionId === 'string' ? req.params.sessionId.trim() : '';
+  if (!sessionId) {
+    return res.status(400).json({ message: 'sessionId is required.' });
+  }
+  const sessionRecord = database.getSession(sessionId);
+  if (!sessionRecord) {
+    return res.status(404).json({ message: 'Session not found.' });
+  }
+  const evaluations = database.getEvaluations(sessionId);
+  res.json({ evaluations });
+}));
+
+app.get('/api/document-library', asyncHandler(async (_req, res) => {
+  if (!fs.existsSync(documentLibraryRoot)) {
+    return res.json({ documents: [] });
+  }
+  const seen = new Set();
+  const results = [];
+  const stack = [{ dir: documentLibraryRoot, relative: '' }];
+
+  while (stack.length) {
+    const { dir, relative } = stack.pop();
+    let entries = [];
+    try {
+      entries = fs.readdirSync(dir, { withFileTypes: true });
+    } catch (error) {
+      console.warn('Failed to read documents directory', error);
+      continue;
+    }
+    for (const entry of entries) {
+      const absolutePath = path.join(dir, entry.name);
+      const relativePath = path.join(relative, entry.name);
+      if (entry.isDirectory()) {
+        stack.push({ dir: absolutePath, relative: relativePath });
+        continue;
+      }
+      if (!/\.(pdf|doc|docx|png|jpe?g)$/i.test(entry.name)) {
+        continue;
+      }
+      if (seen.has(relativePath)) {
+        continue;
+      }
+      seen.add(relativePath);
+      const stats = fs.statSync(absolutePath);
+      const meta = findDocumentMeta(relativePath) || findDocumentMeta(entry.name);
+      const extension = path.extname(entry.name || '').replace('.', '').toUpperCase();
+      const normalizedPath = relativePath.split(path.sep).filter(Boolean).join('/');
+      results.push({
+        name: entry.name,
+        title: meta?.title ?? titleFromFilename(entry.name),
+        description: meta?.description ?? DEFAULT_LIBRARY_META.description,
+        url: `/documents/${normalizedPath}`,
+        sizeBytes: stats.size,
+        modifiedAt: stats.mtime.toISOString(),
+        relativePath: normalizedPath,
+        accentPrimary: meta?.accentPrimary ?? DEFAULT_LIBRARY_META.accentPrimary,
+        accentSecondary: meta?.accentSecondary ?? DEFAULT_LIBRARY_META.accentSecondary,
+        tag: meta?.tag ?? (extension || DEFAULT_LIBRARY_META.tag),
+        extension: extension || '',
+      });
+    }
+  }
+
+  results.sort((a, b) => a.name.localeCompare(b.name));
+  res.json({ documents: results });
+}));
+
+app.post('/api/documents/upload', uploadSingleDocument, asyncHandler(async (req, res) => {
+  const sessionId = typeof req.body?.sessionId === 'string' ? req.body.sessionId.trim() : '';
+  const documentType = typeof req.body?.documentType === 'string' ? req.body.documentType.trim() : '';
+
+  if (!sessionId) {
+    if (req.file?.path) {
+      removeFile(req.file.path);
+    }
+    return res.status(400).json({ message: 'sessionId is required.' });
+  }
+
+  if (!documentType) {
+    if (req.file?.path) {
+      removeFile(req.file.path);
+    }
+    return res.status(400).json({ message: 'documentType is required.' });
+  }
+
+  if (!req.file) {
+    return res.status(400).json({ message: 'file is required.' });
+  }
+
+  const sessionRecord = database.getSession(sessionId);
+  if (!sessionRecord) {
+    removeFile(req.file.path);
+    return res.status(404).json({ message: 'Session not found.' });
+  }
+
+  const relativePath = toPublicRelativePath(req.file.path);
+  const documentRecord = database.recordDocument({
+    sessionId,
+    documentType,
+    originalName: req.file.originalname || req.file.filename,
+    storedName: req.file.filename,
+    relativePath,
+    mimeType: req.file.mimetype,
+    sizeBytes: req.file.size,
+  });
+
+  res.json({ document: buildDocumentPayload(documentRecord) });
+}));
+
+app.get('/api/documents/:sessionId', asyncHandler(async (req, res) => {
+  const sessionId = typeof req.params.sessionId === 'string' ? req.params.sessionId.trim() : '';
+  if (!sessionId) {
+    return res.status(400).json({ message: 'sessionId is required.' });
+  }
+  const sessionRecord = database.getSession(sessionId);
+  if (!sessionRecord) {
+    return res.status(404).json({ message: 'Session not found.' });
+  }
+  const documents = (sessionRecord.documents || database.getDocuments(sessionId)).map((doc) => buildDocumentPayload(doc));
+  res.json({ documents });
+}));
+
+app.get('/api/session/:sessionId', asyncHandler(async (req, res) => {
+  const sessionId = typeof req.params.sessionId === 'string' ? req.params.sessionId.trim() : '';
+  if (!sessionId) {
+    return res.status(400).json({ message: 'sessionId is required.' });
+  }
+  const session = getSessionFromStore(sessionId);
+  if (!session) {
+    return res.status(404).json({ message: 'Session not found.' });
+  }
+  res.json({
+    session: {
+      sessionId: session.sessionId,
+      baseUrl: session.baseUrl,
+      vectorDbId: session.vectorDbId,
+    },
+  });
+}));
+
+
 const extractRagContext = (ragData) => {
   const chunks = ragData?.content ?? ragData?.results ?? [];
   const texts = [];
@@ -402,6 +827,7 @@ const chatWithSession = async (session, prompt) => {
   }
 
   messages.push({ role: 'user', content: enhancedPrompt });
+  database.appendMessage(session.sessionId, { role: 'user', content: enhancedPrompt });
 
   const completionResponse = await client.post('/v1/inference/chat-completion', {
     model_id: MODEL_ID,
@@ -412,6 +838,8 @@ const chatWithSession = async (session, prompt) => {
     ?? JSON.stringify(completionResponse.data);
 
   messages.push({ role: 'assistant', content });
+  database.appendMessage(session.sessionId, { role: 'assistant', content });
+  database.saveSession({ sessionId: session.sessionId, baseUrl: session.baseUrl, vectorDbId });
   return { answer: content, context: ragContext };
 };
 
@@ -420,7 +848,7 @@ app.post('/api/query', asyncHandler(async (req, res) => {
   if (!sessionId || !prompt) {
     return res.status(400).json({ message: 'sessionId and prompt are required.' });
   }
-  const session = sessions.get(sessionId);
+  const session = getSessionFromStore(sessionId);
   if (!session) {
     return res.status(404).json({ message: 'Session not found.' });
   }
@@ -448,11 +876,11 @@ const parseEvaluation = (responseText) => {
 };
 
 app.post('/api/evaluate', asyncHandler(async (req, res) => {
-  const { sessionId, application } = req.body || {};
+  const { sessionId, application, form } = req.body || {};
   if (!sessionId || !application) {
     return res.status(400).json({ message: 'sessionId and application are required.' });
   }
-  const session = sessions.get(sessionId);
+  const session = getSessionFromStore(sessionId);
   if (!session) {
     return res.status(404).json({ message: 'Session not found.' });
   }
@@ -466,13 +894,25 @@ app.post('/api/evaluate', asyncHandler(async (req, res) => {
   if (!evaluation.raw_response) {
     evaluation.raw_response = answer;
   }
+  try {
+    if (form && typeof form === 'object') {
+      database.saveApplication(sessionId, form);
+    } else {
+      database.saveApplication(sessionId, application);
+    }
+    database.recordEvaluation(sessionId, { application, evaluation });
+  } catch (error) {
+    console.warn('Failed to persist evaluation data', error);
+  }
   res.json({ evaluation });
 }));
 
 app.post('/api/reset', (req, res) => {
   const { sessionId } = req.body || {};
-  if (sessionId && sessions.has(sessionId)) {
+  if (sessionId) {
     sessions.delete(sessionId);
+    database.deleteSession(sessionId);
+    removeSessionFiles(sessionId);
   }
   res.json({ status: 'ok' });
 });
@@ -492,4 +932,5 @@ if (fs.existsSync(distPath)) {
 
 app.listen(config.port, () => {
   console.log(`Server listening on port ${config.port}`);
+  console.log(`SQLite database path: ${database.path}`);
 });
