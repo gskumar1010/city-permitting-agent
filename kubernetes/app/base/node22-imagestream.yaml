@@ -1,0 +1,27 @@
+apiVersion: image.openshift.io/v1
+kind: ImageStream
+metadata:
+  annotations:
+    openshift.io/generated-by: OpenShiftNewApp
+  creationTimestamp: null
+  labels:
+    app: city-permitting-ui
+    app.kubernetes.io/component: city-permitting-ui
+    app.kubernetes.io/instance: city-permitting-ui
+  name: nodejs-22
+  namespace: openshift
+spec:
+  lookupPolicy:
+    local: false
+  tags:
+  - annotations:
+      openshift.io/imported-from: registry.access.redhat.com/ubi10/nodejs-22@sha256:13cf213d0a697173ddc674e06fd146bc2493666206373bcb815efbddf4e70995
+    from:
+      kind: DockerImage
+      name: registry.access.redhat.com/ubi10/nodejs-22@sha256:13cf213d0a697173ddc674e06fd146bc2493666206373bcb815efbddf4e70995
+    generation: null
+    importPolicy:
+      importMode: Legacy
+    name: latest
+    referencePolicy:
+      type: ""

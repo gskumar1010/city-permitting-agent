@@ -7,3 +7,6 @@ resources:
 
   # mcp-servers resources
   - ../../mcp-servers/openshift-mcp
+
+  # city permitting app
+  - ../../app

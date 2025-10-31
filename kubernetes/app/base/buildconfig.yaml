@@ -1,0 +1,34 @@
+apiVersion: build.openshift.io/v1
+kind: BuildConfig
+metadata:
+  annotations:
+    openshift.io/generated-by: OpenShiftNewApp
+  creationTimestamp: null
+  labels:
+    app: city-permitting-ui
+    app.kubernetes.io/component: city-permitting-ui
+    app.kubernetes.io/instance: city-permitting-ui
+  name: city-permitting-ui
+  namespace: city-permitting-agent-ui
+spec:
+  nodeSelector: null
+  output:
+    to:
+      kind: ImageStreamTag
+      name: city-permitting-ui:latest
+  postCommit: {}
+  resources: {}
+  source:
+    contextDir: ui
+    git:
+      uri: https://github.com/gskumar1010/city-permitting-agent.git
+    type: Git
+  strategy:
+    sourceStrategy:
+      from:
+        kind: ImageStreamTag
+        name: nodejs-22:latest
+        namespace: openshift
+    type: Source
+  triggers:
+    - type: ConfigChange

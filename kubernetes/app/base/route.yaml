@@ -1,0 +1,21 @@
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  creationTimestamp: null
+  labels:
+    app: city-permitting-ui
+    app.kubernetes.io/component: city-permitting-ui
+    app.kubernetes.io/instance: city-permitting-ui
+  name: city-permitting-ui
+  namespace: city-permitting-agent-ui
+spec:
+  port:
+    targetPort: 8080-tcp
+  to:
+    kind: ""
+    name: city-permitting-ui
+    weight: null
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+status: {}

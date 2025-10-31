@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    openshift.io/generated-by: OpenShiftNewApp
+  creationTimestamp: null
+  labels:
+    app: city-permitting-ui
+    app.kubernetes.io/component: city-permitting-ui
+    app.kubernetes.io/instance: city-permitting-ui
+  name: city-permitting-ui
+  namespace: city-permitting-agent-ui
+spec:
+  ports:
+  - name: 8080-tcp
+    port: 8080
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    deployment: city-permitting-ui
