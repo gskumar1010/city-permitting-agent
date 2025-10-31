@@ -9,6 +9,18 @@ import { database } from './database.js';
 import path from 'node:path';
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import { createRequire } from 'node:module';
+
+const require = createRequire(import.meta.url);
+
+try {
+  const pdfjs = require('pdf-parse/lib/pdf.js/v1.10.100/build/pdf.js');
+  if (pdfjs?.PDFJS?.VERBOSITY_LEVELS?.errors !== undefined) {
+    pdfjs.PDFJS.verbosity = pdfjs.PDFJS.VERBOSITY_LEVELS.errors;
+  }
+} catch (_error) {
+  // Silently ignore configuration issues; parsing still proceeds with default verbosity.
+}
 
 const app = express();
 app.use(cors());

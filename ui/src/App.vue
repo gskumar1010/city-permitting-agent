@@ -599,6 +599,24 @@ const documentOptions = [
 ];
 
 const sessionDocuments = ref([]);
+const documentsByType = computed(() => {
+  const grouped = {};
+  for (const doc of sessionDocuments.value) {
+    const type = doc?.documentType || 'Other';
+    if (!grouped[type]) {
+      grouped[type] = [];
+    }
+    grouped[type].push(doc);
+  }
+  Object.keys(grouped).forEach((key) => {
+    grouped[key].sort((a, b) => {
+      const aTime = new Date(a?.uploadedAt || 0).getTime();
+      const bTime = new Date(b?.uploadedAt || 0).getTime();
+      return bTime - aTime;
+    });
+  });
+  return grouped;
+});
 const documentUploadState = reactive({});
 const documentUploadAccept = '.pdf,.png,.jpg,.jpeg,.doc,.docx';
 
