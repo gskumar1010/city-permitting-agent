@@ -19,3 +19,13 @@ export const evaluateApplication = (payload) => client.post('/evaluate', payload
 export const resetSession = (payload) => client.post('/reset', payload).then((res) => res.data);
 export const autocompleteAddress = (params) =>
   client.get('/address-autocomplete', { params }).then((res) => res.data);
+export const uploadDocument = ({ sessionId, documentType, file }) => {
+  const formData = new FormData();
+  formData.append('sessionId', sessionId);
+  formData.append('documentType', documentType);
+  formData.append('file', file);
+  return client.post('/documents/upload', formData).then((res) => res.data);
+};
+export const fetchDocuments = (sessionId) => client.get(`/documents/${sessionId}`).then((res) => res.data);
+export const saveApplication = (payload) => client.post('/application', payload).then((res) => res.data);
+export const fetchSession = (sessionId) => client.get(`/session/${sessionId}`).then((res) => res.data);

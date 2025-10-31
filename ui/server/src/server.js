@@ -2,8 +2,10 @@ import express from 'express';
 import cors from 'cors';
 import pdf from 'pdf-parse/lib/pdf-parse.js';
 import { v4 as uuidv4 } from 'uuid';
+import multer from 'multer';
 import { config } from './config.js';
 import { createLlamaStackClient } from './llamaStackClient.js';
+import { database } from './database.js';
 import path from 'node:path';
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -13,8 +15,91 @@ app.use(cors());
 app.use(express.json({ limit: '25mb' }));
 app.disable('x-powered-by');
 
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const distPath = path.resolve(__dirname, '../../dist');
+const publicPath = path.resolve(__dirname, '../../public');
+const userFilesRoot = path.join(publicPath, 'users');
+fs.mkdirSync(userFilesRoot, { recursive: true });
+
+app.use('/users', express.static(path.join(publicPath, 'users')));
+
+const sanitizePathSegment = (value) => (value || '').replace(/[^a-zA-Z0-9-_]/g, '');
+const toPublicRelativePath = (filePath) => path.relative(publicPath, filePath).split(path.sep).filter(Boolean).join('/');
+const buildDocumentPayload = (record) => {
+  const relativePath = (record.relativePath || '').replace(/\\/g, '/').replace(/^\/+/, '');
+  return {
+    id: record.id,
+    sessionId: record.sessionId,
+    documentType: record.documentType,
+    originalName: record.originalName,
+    mimeType: record.mimeType,
+    sizeBytes: record.sizeBytes,
+    uploadedAt: record.createdAt,
+    url: `/${relativePath}`
+  };
+};
+
+const removeFile = (filePath) => {
+  if (!filePath) return;
+  fs.unlink(filePath, (error) => {
+    if (error && error.code !== 'ENOENT') {
+      console.warn(`Failed to delete file ${filePath}:`, error);
+    }
+  });
+};
+
+const removeSessionFiles = (sessionId) => {
+  const sanitized = sanitizePathSegment(sessionId);
+  if (!sanitized) return;
+  const sessionDir = path.join(userFilesRoot, sanitized);
+  fs.rm(sessionDir, { recursive: true, force: true }, (error) => {
+    if (error && error.code !== 'ENOENT') {
+      console.warn(`Failed to clean uploads for session ${sessionId}:`, error);
+    }
+  });
+};
+
+const uploadStorage = multer.diskStorage({
+  destination: (req, _file, cb) => {
+    const sessionId = typeof req.body?.sessionId === 'string' ? req.body.sessionId.trim() : '';
+    const sanitized = sanitizePathSegment(sessionId);
+    if (!sanitized) {
+      const error = new Error('A valid sessionId is required.');
+      error.code = 'INVALID_SESSION_ID';
+      return cb(error);
+    }
+    const targetDir = path.join(userFilesRoot, sanitized);
+    fs.mkdirSync(targetDir, { recursive: true });
+    cb(null, targetDir);
+  },
+  filename: (_req, file, cb) => {
+    const ext = path.extname(file.originalname || '').toLowerCase();
+    const baseName = path.basename(file.originalname || 'document', ext).replace(/[^a-zA-Z0-9-_]/g, '_') || 'document';
+    const timestamp = Date.now();
+    cb(null, `${baseName.slice(0, 60)}-${timestamp}${ext}`);
+  },
+});
+
+const upload = multer({
+  storage: uploadStorage,
+  limits: { fileSize: 25 * 1024 * 1024 },
+});
+
+const uploadSingleDocument = (req, res, next) => {
+  upload.single('file')(req, res, (error) => {
+    if (error) {
+      const status = error.code === 'LIMIT_FILE_SIZE' ? 413 : 400;
+      const message = error.code === 'LIMIT_FILE_SIZE'
+        ? 'File is too large. Maximum upload size is 25 MB.'
+        : error.message || 'Upload failed.';
+      return res.status(status).json({ message });
+    }
+    next();
+  });
+};
+
+
 const defaultLlamaUrl = (() => {
   try {
     return new URL(config.llamaStack.baseUrl || 'http://localhost:8321');
@@ -24,6 +109,34 @@ const defaultLlamaUrl = (() => {
 })();
 
 const sessions = new Map();
+
+const getSessionFromStore = (sessionId) => {
+  if (!sessionId) {
+    return null;
+  }
+  if (sessions.has(sessionId)) {
+    return sessions.get(sessionId);
+  }
+  const persisted = database.getSession(sessionId);
+  if (!persisted) {
+    return null;
+  }
+  const baseUrl = persisted.baseUrl || defaultLlamaUrl.origin || defaultLlamaUrl.toString();
+  const session = {
+    sessionId: persisted.sessionId,
+    baseUrl,
+    vectorDbId: persisted.vectorDbId,
+    client: createLlamaStackClient(baseUrl),
+    messages: Array.isArray(persisted.messages) && persisted.messages.length > 0
+      ? persisted.messages.map((message) => ({
+        role: message.role,
+        content: message.content,
+      }))
+      : buildSessionPrompt(),
+  };
+  sessions.set(sessionId, session);
+  return session;
+};
 
 
 const MODEL_ID = 'llama-4-scout-17b-16e-w4a16';
@@ -328,6 +441,8 @@ const performInitialization = async (params = {}, notify) => {
       messages: buildSessionPrompt(),
     };
     sessions.set(sessionId, session);
+    database.saveSession({ sessionId, baseUrl, vectorDbId });
+    database.saveMessages(sessionId, session.messages);
 
     pushLog(logs, 'success', 'Initialization complete.', notify);
 
@@ -372,6 +487,64 @@ app.get('/api/initialize-agent/stream', asyncHandler(async (req, res) => {
   }
 }));
 
+
+
+app.post('/api/documents/upload', uploadSingleDocument, asyncHandler(async (req, res) => {
+  const sessionId = typeof req.body?.sessionId === 'string' ? req.body.sessionId.trim() : '';
+  const documentType = typeof req.body?.documentType === 'string' ? req.body.documentType.trim() : '';
+
+  if (!sessionId) {
+    if (req.file?.path) {
+      removeFile(req.file.path);
+    }
+    return res.status(400).json({ message: 'sessionId is required.' });
+  }
+
+  if (!documentType) {
+    if (req.file?.path) {
+      removeFile(req.file.path);
+    }
+    return res.status(400).json({ message: 'documentType is required.' });
+  }
+
+  if (!req.file) {
+    return res.status(400).json({ message: 'file is required.' });
+  }
+
+  const sessionRecord = database.getSession(sessionId);
+  if (!sessionRecord) {
+    removeFile(req.file.path);
+    return res.status(404).json({ message: 'Session not found.' });
+  }
+
+  const relativePath = toPublicRelativePath(req.file.path);
+  const documentRecord = database.recordDocument({
+    sessionId,
+    documentType,
+    originalName: req.file.originalname || req.file.filename,
+    storedName: req.file.filename,
+    relativePath,
+    mimeType: req.file.mimetype,
+    sizeBytes: req.file.size,
+  });
+
+  res.json({ document: buildDocumentPayload(documentRecord) });
+}));
+
+app.get('/api/documents/:sessionId', asyncHandler(async (req, res) => {
+  const sessionId = typeof req.params.sessionId === 'string' ? req.params.sessionId.trim() : '';
+  if (!sessionId) {
+    return res.status(400).json({ message: 'sessionId is required.' });
+  }
+  const sessionRecord = database.getSession(sessionId);
+  if (!sessionRecord) {
+    return res.status(404).json({ message: 'Session not found.' });
+  }
+  const documents = (sessionRecord.documents || database.getDocuments(sessionId)).map((doc) => buildDocumentPayload(doc));
+  res.json({ documents });
+}));
+
+
 const extractRagContext = (ragData) => {
   const chunks = ragData?.content ?? ragData?.results ?? [];
   const texts = [];
@@ -402,6 +575,7 @@ const chatWithSession = async (session, prompt) => {
   }
 
   messages.push({ role: 'user', content: enhancedPrompt });
+  database.appendMessage(session.sessionId, { role: 'user', content: enhancedPrompt });
 
   const completionResponse = await client.post('/v1/inference/chat-completion', {
     model_id: MODEL_ID,
@@ -412,6 +586,8 @@ const chatWithSession = async (session, prompt) => {
     ?? JSON.stringify(completionResponse.data);
 
   messages.push({ role: 'assistant', content });
+  database.appendMessage(session.sessionId, { role: 'assistant', content });
+  database.saveSession({ sessionId: session.sessionId, baseUrl: session.baseUrl, vectorDbId });
   return { answer: content, context: ragContext };
 };
 
@@ -420,7 +596,7 @@ app.post('/api/query', asyncHandler(async (req, res) => {
   if (!sessionId || !prompt) {
     return res.status(400).json({ message: 'sessionId and prompt are required.' });
   }
-  const session = sessions.get(sessionId);
+  const session = getSessionFromStore(sessionId);
   if (!session) {
     return res.status(404).json({ message: 'Session not found.' });
   }
@@ -449,7 +625,7 @@ app.post('/api/evaluate', asyncHandler(async (req, res) => {
   if (!sessionId || !application) {
     return res.status(400).json({ message: 'sessionId and application are required.' });
   }
-  const session = sessions.get(sessionId);
+  const session = getSessionFromStore(sessionId);
   if (!session) {
     return res.status(404).json({ message: 'Session not found.' });
   }
@@ -466,8 +642,10 @@ app.post('/api/evaluate', asyncHandler(async (req, res) => {
 
 app.post('/api/reset', (req, res) => {
   const { sessionId } = req.body || {};
-  if (sessionId && sessions.has(sessionId)) {
+  if (sessionId) {
     sessions.delete(sessionId);
+    database.deleteSession(sessionId);
+    removeSessionFiles(sessionId);
   }
   res.json({ status: 'ok' });
 });
@@ -487,4 +665,5 @@ if (fs.existsSync(distPath)) {
 
 app.listen(config.port, () => {
   console.log(`Server listening on port ${config.port}`);
+  console.log(`SQLite database path: ${database.path}`);
 });

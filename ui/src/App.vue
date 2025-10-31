@@ -308,17 +308,65 @@
                     <p>Confirm the permits and plans you will submit.</p>
                   </div>
                 </header>
-                <label class="field field--full">
-                  <span>Documents Attached *</span>
-                  <select v-model="application.documents" multiple>
-                    <option v-for="option in documentOptions" :key="option" :value="option">
-                      {{ option }}
-                    </option>
-                  </select>
-                  <small class="field-hint">Select every document you have prepared. Missing items may delay approval. Hold Cmd/Ctrl while clicking to select multiple documents.</small>
-                </label>
+                <div class="form-section__grid form-section__grid--two">
+                  <label class="field">
+                    <span>Documents Attached *</span>
+                    <select v-model="application.documents" multiple>
+                      <option v-for="option in documentOptions" :key="option" :value="option">
+                        {{ option }}
+                      </option>
+                    </select>
+                    <small class="field-hint">Select every document you have prepared. Missing items may delay approval. Hold Cmd/Ctrl while clicking to select multiple documents.</small>
+                  </label>
+                  <div class="upload-panel" :class="{ 'upload-panel--disabled': !sessionReady }">
+                    <div class="upload-panel__header">
+                      <span>Upload Attachments</span>
+                      <small v-if="!sessionReady">Initialize the permitting agent to enable uploads.</small>
+                      <small v-else-if="!application.documents.length">Select a document on the left to attach supporting files.</small>
+                      <small v-else>Upload the files that match each selected document. Accepted formats: PDF, images, DOC, DOCX.</small>
+                    </div>
+                    <div v-if="sessionDocuments.length" class="upload-summary">
+                      {{ sessionDocuments.length }} file{{ sessionDocuments.length === 1 ? '' : 's' }} uploaded this session.
+                    </div>
+                    <div v-if="application.documents.length" class="upload-list">
+                      <div v-for="option in application.documents" :key="option" class="upload-item">
+                        <div class="upload-item__header">
+                          <span class="upload-item__label">{{ option }}</span>
+                          <input
+                            class="upload-input"
+                            type="file"
+                            :id="`upload-${slugifyDocumentType(option)}`"
+                            :accept="documentUploadAccept"
+                            :disabled="!sessionReady || documentUploadState[option]?.uploading"
+                            @change="handleDocumentUpload(option, $event)"
+                          />
+                          <label
+                            class="upload-button"
+                            :class="{ disabled: !sessionReady || documentUploadState[option]?.uploading }"
+                            :for="`upload-${slugifyDocumentType(option)}`"
+                          >
+                            {{ documentUploadState[option]?.uploading ? 'Uploading...' : 'Upload File' }}
+                          </label>
+                        </div>
+                        <p v-if="documentUploadState[option]?.error" class="upload-error">
+                          {{ documentUploadState[option].error }}
+                        </p>
+                        <ul v-if="documentsByType[option]?.length" class="upload-files">
+                          <li v-for="doc in documentsByType[option]" :key="doc.id">
+                            <a :href="doc.url" target="_blank" rel="noopener">
+                              {{ doc.originalName }}
+                            </a>
+                            <span class="meta">{{ formatFileSize(doc.sizeBytes) }}</span>
+                            <span class="meta">{{ formatUploadedAt(doc.uploadedAt) }}</span>
+                          </li>
+                        </ul>
+                        <p v-else class="upload-hint">No uploads yet.</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
                 <div class="section-actions">
-                  <button type="button" class="link-button" @click="scrollToTop">⬆️ Back to Top</button>
+                  <button type="button" class="link-button" @click="scrollToTop">?? Back to Top</button>
                 </div>
               </section>
 
@@ -518,8 +566,8 @@ import redhatLogo from './assets/redhat-logo.svg';
 import twitterIcon from './assets/icons/twitter.svg';
 import facebookIcon from './assets/icons/facebook.svg';
 import instagramIcon from './assets/icons/instagram.svg';
-import { computed, onBeforeUnmount, reactive, ref } from 'vue';
-import { autocompleteAddress, evaluateApplication, initializeAgentStream, queryAgent, resetSession } from './services/api.js';
+import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue';
+import { autocompleteAddress, evaluateApplication, fetchDocuments, initializeAgentStream, queryAgent, resetSession, uploadDocument } from './services/api.js';
 
 const config = reactive({
   protocol: 'http',
@@ -549,6 +597,10 @@ const documentOptions = [
   'Waste Disposal Plan',
   'Certified Food Manager Certificate',
 ];
+
+const sessionDocuments = ref([]);
+const documentUploadState = reactive({});
+const documentUploadAccept = '.pdf,.png,.jpg,.jpeg,.doc,.docx';
 
 const socialLinks = [
   { label: 'Twitter', href: 'https://www.twitter.com/CityofDenver', icon: twitterIcon },
@@ -612,6 +664,75 @@ const selectCommissarySuggestion = (suggestion) => {
   commissarySuggestions.value = [];
 };
 
+const slugifyDocumentType = (value) => (value || '')
+  .toLowerCase()
+  .replace(/[^a-z0-9]+/g, '-')
+  .replace(/(^-|-$)/g, '') || 'document';
+
+const formatFileSize = (bytes) => {
+  if (!Number.isFinite(bytes) || bytes <= 0) {
+    return '';
+  }
+  const units = ['bytes', 'KB', 'MB', 'GB'];
+  let size = bytes;
+  let unitIndex = 0;
+  while (size >= 1024 && unitIndex < units.length - 1) {
+    size /= 1024;
+    unitIndex += 1;
+  }
+  const precision = unitIndex === 0 ? 0 : size < 10 ? 1 : 0;
+  return `${size.toFixed(precision)} ${units[unitIndex]}`;
+};
+
+const formatUploadedAt = (timestamp) => {
+  if (!timestamp) return '';
+  const date = new Date(timestamp);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toLocaleString();
+};
+
+const loadSessionDocuments = async () => {
+  if (!sessionId.value) {
+    sessionDocuments.value = [];
+    return;
+  }
+  try {
+    const { documents = [] } = await fetchDocuments(sessionId.value);
+    sessionDocuments.value = documents;
+  } catch (error) {
+    console.warn('Failed to load session documents', error);
+  }
+};
+
+const handleDocumentUpload = async (documentType, event) => {
+  const input = event?.target;
+  const files = input?.files || [];
+  const file = files[0];
+  if (!file) {
+    return;
+  }
+  if (!sessionReady.value || !sessionId.value) {
+    documentUploadState[documentType] = { uploading: false, error: 'Initialize the agent before uploading files.' };
+    if (input) {
+      input.value = '';
+    }
+    return;
+  }
+  documentUploadState[documentType] = { uploading: true, error: '' };
+  try {
+    await uploadDocument({ sessionId: sessionId.value, documentType, file });
+    await loadSessionDocuments();
+    documentUploadState[documentType] = { uploading: false, error: '' };
+  } catch (error) {
+    const message = error?.response?.data?.message || error.message || 'Upload failed.';
+    documentUploadState[documentType] = { uploading: false, error: message };
+  } finally {
+    if (input) {
+      input.value = '';
+    }
+  }
+};
+
 const createEmptyApplication = () => ({
   businessName: '',
   operatorName: '',
@@ -634,7 +755,6 @@ const createEmptyApplication = () => ({
 });
 
 const application = reactive(createEmptyApplication());
-
 const evaluationResult = ref(null);
 const evaluationLoading = ref(false);
 const formError = ref('');
@@ -752,7 +872,7 @@ const initializeAgentHandler = async () => {
 
   currentStream.value = stream;
 
-  stream.addEventListener('log', (event) => {
+stream.addEventListener('log', (event) => {
     const payload = parseEventData(event);
     if (payload) {
       logs.value = [...logs.value, payload];
@@ -801,6 +921,28 @@ const initializeAgentHandler = async () => {
     closeCurrentStream();
   };
 };
+
+watch(sessionId, (value) => {
+  sessionDocuments.value = [];
+  Object.keys(documentUploadState).forEach((key) => {
+    delete documentUploadState[key];
+  });
+  if (value) {
+    loadSessionDocuments();
+  }
+});
+
+watch(
+  () => [...application.documents],
+  (docs) => {
+    const active = new Set(docs);
+    Object.keys(documentUploadState).forEach((key) => {
+      if (!active.has(key)) {
+        delete documentUploadState[key];
+      }
+    });
+  },
+);
 
 onBeforeUnmount(() => {
   closeCurrentStream();

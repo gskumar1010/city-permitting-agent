@@ -693,6 +693,139 @@ button.secondary {
   grid-column: 1 / -1;
 }
 
+.upload-panel {
+  background: rgba(15, 44, 83, 0.04);
+  border: 1px solid rgba(15, 44, 83, 0.08);
+  border-radius: 16px;
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-height: 100%;
+}
+
+.upload-panel--disabled {
+  opacity: 0.6;
+}
+
+.upload-panel__header span {
+  font-weight: 700;
+  font-size: 1rem;
+  color: #0f172a;
+}
+
+.upload-panel__header small {
+  display: block;
+  margin-top: 0.35rem;
+  color: rgba(15, 23, 42, 0.65);
+  font-size: 0.85rem;
+}
+
+.upload-summary {
+  font-size: 0.85rem;
+  color: rgba(15, 23, 42, 0.65);
+}
+
+.upload-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.upload-item {
+  border: 1px dashed rgba(15, 44, 83, 0.25);
+  border-radius: 12px;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+
+.upload-item__header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+.upload-item__label {
+  font-weight: 600;
+  color: #102a43;
+  flex: 1 1 auto;
+}
+
+.upload-input {
+  position: absolute;
+  width: 0.1px;
+  height: 0.1px;
+  opacity: 0;
+  overflow: hidden;
+  z-index: -1;
+}
+
+.upload-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 0.45rem 0.9rem;
+  border-radius: 999px;
+  border: 1px solid #f16a2f;
+  color: #f16a2f;
+  background: rgba(241, 106, 47, 0.12);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease;
+}
+
+.upload-button:hover:not(.disabled) {
+  background: rgba(241, 106, 47, 0.22);
+  transform: translateY(-1px);
+}
+
+.upload-button.disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.upload-error {
+  color: #d92d20;
+  font-size: 0.85rem;
+  margin-top: 0.5rem;
+}
+
+.upload-files {
+  list-style: none;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.upload-files a {
+  font-weight: 600;
+  color: #0f2c53;
+  text-decoration: none;
+}
+
+.upload-files a:hover {
+  text-decoration: underline;
+}
+
+.upload-files .meta {
+  margin-left: 0.5rem;
+  font-size: 0.8rem;
+  color: rgba(15, 23, 42, 0.65);
+}
+
+.upload-hint {
+  margin-top: 0.75rem;
+  font-size: 0.85rem;
+  color: rgba(15, 23, 42, 0.6);
+}
+
 .metric-field .input-with-unit {
   display: flex;
   align-items: center;
