@@ -424,6 +424,9 @@ app.post('/api/query', asyncHandler(async (req, res) => {
   if (!session) {
     return res.status(404).json({ message: 'Session not found.' });
   }
+  // FIX: Reset messages to only system prompt before each evaluation
+  session.messages = buildSessionPrompt();
+  
   const result = await chatWithSession(session, prompt);
   res.json(result);
 }));
