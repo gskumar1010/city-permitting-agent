@@ -22,7 +22,6 @@
           <button :class="['nav-tab', activeTab === 'submit' ? 'active' : '']" @click="activeTab = 'submit'">📝 Submit Application</button>
           <button :class="['nav-tab', activeTab === 'questions' ? 'active' : '']" @click="activeTab = 'questions'">💬 Ask Questions</button>
           <button :class="['nav-tab', activeTab === 'history' ? 'active' : '']" @click="activeTab = 'history'">📊 Evaluation History</button>
-          <button :class="['nav-tab', activeTab === 'library' ? 'active' : '']" @click="activeTab = 'library'">📂 Reference Documents</button>
         </div>
       </nav>
     </header>
@@ -309,65 +308,17 @@
                     <p>Confirm the permits and plans you will submit.</p>
                   </div>
                 </header>
-                <div class="form-section__grid form-section__grid--two">
-                  <label class="field">
-                    <span>Documents Attached *</span>
-                    <select v-model="application.documents" multiple>
-                      <option v-for="option in documentOptions" :key="option" :value="option">
-                        {{ option }}
-                      </option>
-                    </select>
-                    <small class="field-hint">Select every document you have prepared. Missing items may delay approval. Hold Cmd/Ctrl while clicking to select multiple documents.</small>
-                  </label>
-                  <div class="upload-panel" :class="{ 'upload-panel--disabled': !sessionReady }">
-                    <div class="upload-panel__header">
-                      <span>Upload Attachments</span>
-                      <small v-if="!sessionReady">Initialize the permitting agent to enable uploads.</small>
-                      <small v-else-if="!application.documents.length">Select a document on the left to attach supporting files.</small>
-                      <small v-else>Upload the files that match each selected document. Accepted formats: PDF, images, DOC, DOCX.</small>
-                    </div>
-                    <div v-if="sessionDocuments.length" class="upload-summary">
-                      {{ sessionDocuments.length }} file{{ sessionDocuments.length === 1 ? '' : 's' }} uploaded this session.
-                    </div>
-                    <div v-if="application.documents.length" class="upload-list">
-                      <div v-for="option in application.documents" :key="option" class="upload-item">
-                        <div class="upload-item__header">
-                          <span class="upload-item__label">{{ option }}</span>
-                          <input
-                            class="upload-input"
-                            type="file"
-                            :id="`upload-${slugifyDocumentType(option)}`"
-                            :accept="documentUploadAccept"
-                            :disabled="!sessionReady || documentUploadState[option]?.uploading"
-                            @change="handleDocumentUpload(option, $event)"
-                          />
-                          <label
-                            class="upload-button"
-                            :class="{ disabled: !sessionReady || documentUploadState[option]?.uploading }"
-                            :for="`upload-${slugifyDocumentType(option)}`"
-                          >
-                            {{ documentUploadState[option]?.uploading ? 'Uploading...' : 'Upload File' }}
-                          </label>
-                        </div>
-                        <p v-if="documentUploadState[option]?.error" class="upload-error">
-                          {{ documentUploadState[option].error }}
-                        </p>
-                        <ul v-if="documentsByType[option]?.length" class="upload-files">
-                          <li v-for="doc in documentsByType[option]" :key="doc.id">
-                            <a :href="doc.url" target="_blank" rel="noopener">
-                              {{ doc.originalName }}
-                            </a>
-                            <span class="meta">{{ formatFileSize(doc.sizeBytes) }}</span>
-                            <span class="meta">{{ formatUploadedAt(doc.uploadedAt) }}</span>
-                          </li>
-                        </ul>
-                        <p v-else class="upload-hint">No uploads yet.</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                <label class="field field--full">
+                  <span>Documents Attached *</span>
+                  <select v-model="application.documents" multiple>
+                    <option v-for="option in documentOptions" :key="option" :value="option">
+                      {{ option }}
+                    </option>
+                  </select>
+                  <small class="field-hint">Select every document you have prepared. Missing items may delay approval. Hold Cmd/Ctrl while clicking to select multiple documents.</small>
+                </label>
                 <div class="section-actions">
-                  <button type="button" class="link-button" @click="scrollToTop">?? Back to Top</button>
+                  <button type="button" class="link-button" @click="scrollToTop">⬆️ Back to Top</button>
                 </div>
               </section>
 
@@ -476,64 +427,6 @@
             </div>
           </section>
 
-          <section v-else-if="activeTab === 'library'" class="tab-content document-section">
-            <div v-if="libraryLoading" class="alert info">Loading documents…</div>
-            <div v-else-if="libraryError" class="alert error">{{ libraryError }}</div>
-            <template v-else-if="libraryCards.length">
-              <header class="document-hero">
-                <div class="document-hero__copy">
-                  <span class="document-hero__eyebrow">Reference Library</span>
-                  <h2>Document Downloads</h2>
-                  <p>
-                    Download the official packets, checklists, and guides that Denver Public Health and partner
-                    agencies require for food truck permitting.
-                  </p>
-                </div>
-                <div class="document-hero__stats">
-                  <div class="document-stat">
-                    <span class="document-stat__value">{{ libraryStats.total }}</span>
-                    <span class="document-stat__label">Documents</span>
-                  </div>
-                  <div class="document-stat" v-if="libraryLastUpdatedDisplay">
-                    <span class="document-stat__value">{{ libraryLastUpdatedDisplay }}</span>
-                    <span class="document-stat__label">Last Updated</span>
-                  </div>
-                </div>
-              </header>
-              <div class="document-grid">
-                <article
-                  v-for="doc in libraryCards"
-                  :key="doc.relativePath"
-                  class="document-card"
-                  :style="{ '--accent-primary': doc.accentPrimary, '--accent-secondary': doc.accentSecondary }"
-                >
-                  <div class="document-card__thumb">
-                    <img :src="doc.icon" :alt="`${doc.title} icon`" class="document-card__icon" />
-                    <span class="document-card__tag">{{ doc.tag }}</span>
-                  </div>
-                  <div class="document-card__body">
-                    <h3>{{ doc.title }}</h3>
-                    <p>{{ doc.description }}</p>
-                    <div class="document-card__details">
-                      <span>{{ doc.extension || 'PDF' }}</span>
-                      <span>{{ formatFileSize(doc.sizeBytes) || '—' }}</span>
-                      <span>{{ formatUploadedAt(doc.modifiedAt) || '—' }}</span>
-                    </div>
-                    <a
-                      class="document-card__download"
-                      :href="doc.url"
-                      target="_blank"
-                      rel="noopener"
-                    >
-                      Download
-                    </a>
-                  </div>
-                </article>
-              </div>
-            </template>
-            <div v-else class="alert info">No reference documents found.</div>
-          </section>
-
           <section v-else class="tab-content">
             <h2>Evaluation History</h2>
             <div v-if="history.length" class="history">
@@ -625,21 +518,8 @@ import redhatLogo from './assets/redhat-logo.svg';
 import twitterIcon from './assets/icons/twitter.svg';
 import facebookIcon from './assets/icons/facebook.svg';
 import instagramIcon from './assets/icons/instagram.svg';
-import pdfIcon from './assets/icons/document-pdf.svg';
-import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
-import {
-  autocompleteAddress,
-  evaluateApplication,
-  fetchDocuments,
-  fetchDocumentLibrary,
-  fetchEvaluationHistory,
-  fetchSavedApplication,
-  fetchSession,
-  initializeAgentStream,
-  queryAgent,
-  resetSession,
-  uploadDocument,
-} from './services/api.js';
+import { computed, onBeforeUnmount, reactive, ref } from 'vue';
+import { autocompleteAddress, evaluateApplication, initializeAgentStream, queryAgent, resetSession } from './services/api.js';
 
 const config = reactive({
   protocol: 'http',
@@ -669,28 +549,6 @@ const documentOptions = [
   'Waste Disposal Plan',
   'Certified Food Manager Certificate',
 ];
-
-const sessionDocuments = ref([]);
-const documentsByType = computed(() => {
-  const grouped = {};
-  for (const doc of sessionDocuments.value) {
-    const type = doc?.documentType || 'Other';
-    if (!grouped[type]) {
-      grouped[type] = [];
-    }
-    grouped[type].push(doc);
-  }
-  Object.keys(grouped).forEach((key) => {
-    grouped[key].sort((a, b) => {
-      const aTime = new Date(a?.uploadedAt || 0).getTime();
-      const bTime = new Date(b?.uploadedAt || 0).getTime();
-      return bTime - aTime;
-    });
-  });
-  return grouped;
-});
-const documentUploadState = reactive({});
-const documentUploadAccept = '.pdf,.png,.jpg,.jpeg,.doc,.docx';
 
 const socialLinks = [
   { label: 'Twitter', href: 'https://www.twitter.com/CityofDenver', icon: twitterIcon },
@@ -754,217 +612,6 @@ const selectCommissarySuggestion = (suggestion) => {
   commissarySuggestions.value = [];
 };
 
-const slugifyDocumentType = (value) => (value || '')
-  .toLowerCase()
-  .replace(/[^a-z0-9]+/g, '-')
-  .replace(/(^-|-$)/g, '') || 'document';
-
-const formatFileSize = (bytes) => {
-  if (!Number.isFinite(bytes) || bytes <= 0) {
-    return '';
-  }
-  const units = ['bytes', 'KB', 'MB', 'GB'];
-  let size = bytes;
-  let unitIndex = 0;
-  while (size >= 1024 && unitIndex < units.length - 1) {
-    size /= 1024;
-    unitIndex += 1;
-  }
-  const precision = unitIndex === 0 ? 0 : size < 10 ? 1 : 0;
-  return `${size.toFixed(precision)} ${units[unitIndex]}`;
-};
-
-const formatUploadedAt = (timestamp) => {
-  if (!timestamp) return '';
-  const date = new Date(timestamp);
-  if (Number.isNaN(date.getTime())) return '';
-  return date.toLocaleString();
-};
-
-const loadSessionDocuments = async () => {
-  if (!sessionId.value) {
-    sessionDocuments.value = [];
-    return;
-  }
-  try {
-    const { documents = [] } = await fetchDocuments(sessionId.value);
-    sessionDocuments.value = documents;
-  } catch (error) {
-    console.warn('Failed to load session documents', error);
-  }
-};
-
-const handleDocumentUpload = async (documentType, event) => {
-  const input = event?.target;
-  const files = input?.files || [];
-  const file = files[0];
-  if (!file) {
-    return;
-  }
-  if (!sessionReady.value || !sessionId.value) {
-    documentUploadState[documentType] = { uploading: false, error: 'Initialize the agent before uploading files.' };
-    if (input) {
-      input.value = '';
-    }
-    return;
-  }
-  documentUploadState[documentType] = { uploading: true, error: '' };
-  try {
-    await uploadDocument({ sessionId: sessionId.value, documentType, file });
-    await loadSessionDocuments();
-    documentUploadState[documentType] = { uploading: false, error: '' };
-  } catch (error) {
-    const message = error?.response?.data?.message || error.message || 'Upload failed.';
-    documentUploadState[documentType] = { uploading: false, error: message };
-  } finally {
-    if (input) {
-      input.value = '';
-    }
-  }
-};
-
-const toPlainApplication = () => JSON.parse(JSON.stringify(application));
-
-const applySavedApplication = (saved) => {
-  if (!saved || typeof saved !== 'object') {
-    return;
-  }
-  const defaults = createEmptyApplication();
-  const merged = { ...defaults, ...saved };
-  merged.cookingEquipment = Array.isArray(merged.cookingEquipment) ? merged.cookingEquipment : [];
-  merged.documents = Array.isArray(merged.documents) ? merged.documents : [];
-  Object.assign(application, merged);
-};
-
-const loadSavedApplication = async (targetSessionId = sessionId.value) => {
-  if (!targetSessionId) {
-    return;
-  }
-  try {
-    const { application: savedApplication, updatedAt } = await fetchSavedApplication(targetSessionId);
-    if (savedApplication && typeof savedApplication === 'object') {
-      applySavedApplication(savedApplication);
-      logs.value = [
-        {
-          id: crypto.randomUUID(),
-          type: 'info',
-          message: `Draft restored from database${updatedAt ? ` (saved ${new Date(updatedAt).toLocaleString()})` : ''}.`,
-          timestamp: Date.now(),
-        },
-        ...logs.value,
-      ];
-    }
-  } catch (error) {
-    if (error?.response?.status !== 404) {
-      console.warn('Failed to load saved application', error);
-    }
-  }
-};
-
-const loadEvaluationHistory = async (targetSessionId = sessionId.value) => {
-  if (!targetSessionId) {
-    history.value = [];
-    return;
-  }
-  try {
-    const { evaluations = [] } = await fetchEvaluationHistory(targetSessionId);
-    const normalized = evaluations.map((entry) => ({
-      id: entry.id ?? crypto.randomUUID(),
-      createdAt: entry.createdAt,
-      application: entry.application ?? {},
-      evaluation: entry.evaluation ?? {},
-    }));
-    history.value = normalized.sort((a, b) => {
-      const aTime = new Date(a.createdAt || 0).getTime();
-      const bTime = new Date(b.createdAt || 0).getTime();
-      return aTime - bTime;
-    });
-  } catch (error) {
-    console.warn('Failed to load evaluation history', error);
-  }
-};
-
-const loadDocumentLibrary = async () => {
-  libraryLoading.value = true;
-  libraryError.value = '';
-  try {
-    const { documents = [] } = await fetchDocumentLibrary();
-    documentLibrary.value = documents;
-  } catch (error) {
-    libraryError.value = error?.response?.data?.message || error.message || 'Failed to load documents.';
-  } finally {
-    libraryLoading.value = false;
-  }
-};
-
-const updateUrlForSession = (value) => {
-  if (typeof window === 'undefined') {
-    return;
-  }
-  const url = new URL(window.location.href);
-  if (value) {
-    url.search = `?${encodeURIComponent(value)}`;
-  } else {
-    url.search = '';
-  }
-  window.history.replaceState({}, '', url.toString());
-};
-
-const extractSessionIdFromQuery = () => {
-  if (typeof window === 'undefined') {
-    return '';
-  }
-  const search = window.location.search || '';
-  if (!search) {
-    return '';
-  }
-  const trimmed = search.slice(1).trim();
-  if (!trimmed) {
-    return '';
-  }
-  if (!trimmed.includes('=')) {
-    return decodeURIComponent(trimmed);
-  }
-  const params = new URLSearchParams(search);
-  return params.get('sessionId') || params.get('session') || params.get('id') || '';
-};
-
-const restoreSessionFromUrl = async (candidate) => {
-  if (!candidate) {
-    return;
-  }
-  try {
-    const { session } = await fetchSession(candidate);
-    if (!session?.sessionId) {
-      return;
-    }
-    sessionId.value = session.sessionId;
-    vectorDbId.value = session.vectorDbId || '';
-    showConfig.value = false;
-    logs.value = [
-      {
-        id: crypto.randomUUID(),
-        type: 'info',
-        message: `Restored session ${session.sessionId} from database.`,
-        timestamp: Date.now(),
-      },
-      ...logs.value,
-    ];
-  } catch (error) {
-    const message = error?.response?.data?.message || error.message || 'Failed to restore session from database.';
-    logs.value = [
-      {
-        id: crypto.randomUUID(),
-        type: 'error',
-        message,
-        timestamp: Date.now(),
-      },
-      ...logs.value,
-    ];
-    console.warn('Failed to restore session from URL', error);
-  }
-};
-
 const createEmptyApplication = () => ({
   businessName: '',
   operatorName: '',
@@ -987,40 +634,11 @@ const createEmptyApplication = () => ({
 });
 
 const application = reactive(createEmptyApplication());
+
 const evaluationResult = ref(null);
 const evaluationLoading = ref(false);
 const formError = ref('');
 const history = ref([]);
-const documentLibrary = ref([]);
-const libraryLoading = ref(false);
-const libraryError = ref('');
-const libraryCards = computed(() =>
-  documentLibrary.value.map((doc) => ({
-    ...doc,
-    icon: doc.thumbnail || pdfIcon,
-    tag: doc.tag || doc.extension || 'Document',
-    accentPrimary: doc.accentPrimary || '#2563eb',
-    accentSecondary: doc.accentSecondary || '#60a5fa',
-  })),
-);
-const libraryStats = computed(() => {
-  const docs = documentLibrary.value;
-  if (!docs.length) {
-    return { total: 0, lastUpdated: '' };
-  }
-  const latestDoc = docs.reduce((latest, current) => {
-    const latestTime = latest ? new Date(latest.modifiedAt || latest.uploadedAt || 0).getTime() : 0;
-    const currentTime = new Date(current.modifiedAt || current.uploadedAt || 0).getTime();
-    return currentTime > latestTime ? current : latest;
-  }, null);
-  return {
-    total: docs.length,
-    lastUpdated: latestDoc?.modifiedAt || latestDoc?.uploadedAt || '',
-  };
-});
-const libraryLastUpdatedDisplay = computed(() =>
-  libraryStats.value.lastUpdated ? formatUploadedAt(libraryStats.value.lastUpdated) : '',
-);
 const activeTab = ref('submit');
 
 const completedSections = computed(() => ({
@@ -1052,6 +670,10 @@ const commonQuestions = [
 ];
 
 const reversedHistory = computed(() => [...history.value].reverse());
+
+const pushHistory = (record) => {
+  history.value.push({ ...record, id: crypto.randomUUID() });
+};
 
 const pretty = (obj) => JSON.stringify(obj, null, 2);
 
@@ -1130,7 +752,7 @@ const initializeAgentHandler = async () => {
 
   currentStream.value = stream;
 
-stream.addEventListener('log', (event) => {
+  stream.addEventListener('log', (event) => {
     const payload = parseEventData(event);
     if (payload) {
       logs.value = [...logs.value, payload];
@@ -1180,51 +802,11 @@ stream.addEventListener('log', (event) => {
   };
 };
 
-watch(sessionId, (value) => {
-  updateUrlForSession(value);
-  sessionDocuments.value = [];
-  history.value = [];
-  Object.keys(documentUploadState).forEach((key) => {
-    delete documentUploadState[key];
-  });
-  if (value) {
-    loadSessionDocuments();
-    loadSavedApplication(value);
-    loadEvaluationHistory(value);
-  }
-});
-
-watch(activeTab, (value) => {
-  if (value === 'library' && (!documentLibrary.value.length || libraryError.value)) {
-    loadDocumentLibrary();
-  }
-});
-
-watch(
-  () => [...application.documents],
-  (docs) => {
-    const active = new Set(docs);
-    Object.keys(documentUploadState).forEach((key) => {
-      if (!active.has(key)) {
-        delete documentUploadState[key];
-      }
-    });
-  },
-);
-
 onBeforeUnmount(() => {
   closeCurrentStream();
   if (commissarySuggestionTimeout) {
     clearTimeout(commissarySuggestionTimeout);
   }
-});
-
-onMounted(() => {
-  const candidate = extractSessionIdFromQuery();
-  if (candidate) {
-    restoreSessionFromUrl(candidate);
-  }
-  loadDocumentLibrary();
 });
 
 const buildApplicationPayload = () => ({
@@ -1261,10 +843,9 @@ const submitApplication = async () => {
   evaluationResult.value = null;
   try {
     const payload = buildApplicationPayload();
-    const formSnapshot = toPlainApplication();
-    const { evaluation } = await evaluateApplication({ sessionId: sessionId.value, application: payload, form: formSnapshot });
+    const { evaluation } = await evaluateApplication({ sessionId: sessionId.value, application: payload });
     evaluationResult.value = evaluation;
-    await loadEvaluationHistory(sessionId.value);
+    pushHistory({ application: payload, evaluation });
   } catch (error) {
     formError.value = error.response?.data?.message || error.message;
   } finally {

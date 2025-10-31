@@ -8,8 +8,6 @@ Denver Permitting Agent UI - for demo purposes only
 - **Permit application intake** with an AI-generated scorecard
 - **RAG-backed Q&A** about Denver food truck regulations
 - **Evaluation history** identical to the Streamlit experience
-- **Persistent sessions** stored in SQLite so conversations survive restarts
-- **Document attachments** per session with files streamed to the server-side upload store
 
 ## Prerequisites
 
@@ -26,7 +24,6 @@ TOGETHER_API_KEY=
 SAMBANOVA_API_KEY=
 OPENAI_API_KEY=
 TAVILY_SEARCH_API_KEY=
-DATABASE_PATH=server/data/app.db # optional override
 ```
 
 Only `LLAMA_STACK_ENDPOINT` is required; API keys are optional. If your Llama Stack server is available over HTTPS, set the endpoint with an `https://` URL; the sidebar protocol selector in the UI will pick that up so calls to the stack stay encrypted end-to-end.
@@ -71,13 +68,8 @@ src/                 # Vue 3 client replicating the Streamlit UI
   style.css          # Dark theme styling modeled after Streamlit
 ```
 
-## SQLite Storage
-
-The Express server initialises a SQLite database (default `server/data/app.db`) to persist agent sessions, chat transcripts, and evaluations. Override the location with `DATABASE_PATH` if you need a different path. The schema is created automatically on startup and the database file is ignored by Git. Uploaded documents are written to `public/users/<session_id>/` and excluded from source control; you can mount that directory to retain files across deploys if needed.
-
-
 ## Notes
 
 - Document ingestion downloads the same Denver PDF regulations; a fallback text corpus is used when downloads fail.
 - Vector DB setup, RAG queries, and evaluations follow the original Streamlit flow via Llama Stack REST endpoints.
-- Session data persists server-side via SQLite. Use the reset endpoint or delete the database file to clear history.
+- All evaluation history is kept client-side (in-memory), mirroring the Streamlit session behaviour.
