@@ -453,7 +453,9 @@ app.post('/api/evaluate', asyncHandler(async (req, res) => {
   if (!session) {
     return res.status(404).json({ message: 'Session not found.' });
   }
-
+// FIX: Reset messages to only system prompt before each evaluation
+  session.messages = buildSessionPrompt();
+  
   const evaluationPrompt = `Evaluate this Denver food truck permit application:\n\nAPPLICATION DATA:\n${JSON.stringify(application, null, 2)}\n\nProvide a detailed evaluation in JSON format with:\n{\n  "overall_score": <0-100>,\n  "recommendation": "APPROVED" | "NEEDS_REVISION" | "REJECTED",\n  "categories": {\n    "completeness": {"score": <0-100>, "findings": [...], "required_actions": [...]},\n    "accuracy": {"score": <0-100>, "findings": [...], "required_actions": [...]},\n    "compliance": {"score": <0-100>, "findings": [...], "required_actions": [...]},\n    "documentation": {"score": <0-100>, "findings": [...], "required_actions": [...]},\n    "safety_requirements": {"score": <0-100>, "findings": [...], "required_actions": [...]}\n  },\n  "summary": "<brief summary>",\n  "next_steps": [...]\n}`;
 
   const { answer } = await chatWithSession(session, evaluationPrompt);
