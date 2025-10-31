@@ -1342,3 +1342,135 @@ button.secondary {
   display: inline-block;
   filter: brightness(0) invert(1);
 }
+
+.actions--inline {
+  display: flex;
+  justify-content: flex-end;
+}
+
+
+.document-library--intro {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.document-library__summary {
+  font-size: 0.95rem;
+  color: #475569;
+}
+
+.document-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1.75rem;
+  position: relative;
+}
+
+.document-card {
+  --accent-primary: #2563eb;
+  --accent-secondary: #60a5fa;
+  display: flex;
+  flex-direction: column;
+  border-radius: 1.1rem;
+  border: 1px solid rgba(15, 38, 92, 0.12);
+  background: #ffffff;
+  box-shadow: 0 26px 58px -35px rgba(15, 23, 42, 0.45);
+  overflow: hidden;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.document-card:hover {
+  transform: translateY(-6px) scale(1.01);
+  box-shadow: 0 38px 72px -32px rgba(15, 23, 42, 0.55);
+}
+
+.document-card__thumb {
+  position: relative;
+  background: radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.35), transparent 55%),
+    linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+  padding: 2.1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.document-card__icon {
+  width: 72px;
+  height: auto;
+  filter: drop-shadow(0 12px 24px rgba(15, 23, 42, 0.28));
+}
+
+.document-card__tag {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.94);
+  color: #0f172a;
+  box-shadow: 0 12px 20px rgba(15, 23, 42, 0.18);
+}
+
+.document-card__body {
+  padding: 2rem 1.85rem 1.9rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.document-card__body h3 {
+  margin: 0;
+  font-size: 1.18rem;
+  color: #0f172a;
+}
+
+.document-card__body p {
+  margin: 0;
+  color: #334155;
+  font-size: 0.96rem;
+  line-height: 1.65;
+}
+
+.document-card__details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: #7c8294;
+}
+
+.document-card__download {
+  align-self: flex-start;
+  background: var(--accent-primary);
+  color: #ffffff;
+  font-weight: 700;
+  padding: 0.65rem 1.2rem;
+  border-radius: 0.75rem;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  box-shadow: 0 16px 32px rgba(37, 99, 235, 0.25);
+  transition: background 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.document-card__download:hover {
+  background: var(--accent-secondary);
+  transform: translateY(-3px);
+  box-shadow: 0 20px 36px rgba(96, 165, 250, 0.28);
+}
+
+.document-card__download:focus-visible {
+  outline: 3px solid rgba(96, 165, 250, 0.85);
+  outline-offset: 2px;
+}

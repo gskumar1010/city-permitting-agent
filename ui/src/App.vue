@@ -22,6 +22,7 @@
           <button :class="['nav-tab', activeTab === 'submit' ? 'active' : '']" @click="activeTab = 'submit'">📝 Submit Application</button>
           <button :class="['nav-tab', activeTab === 'questions' ? 'active' : '']" @click="activeTab = 'questions'">💬 Ask Questions</button>
           <button :class="['nav-tab', activeTab === 'history' ? 'active' : '']" @click="activeTab = 'history'">📊 Evaluation History</button>
+          <button :class="['nav-tab', activeTab === 'library' ? 'active' : '']" @click="activeTab = 'library'">📂 Document Downloads</button>
         </div>
       </nav>
     </header>
@@ -475,6 +476,44 @@
             </div>
           </section>
 
+          <section v-else-if="activeTab === 'library'" class="tab-content">
+            <h2>Document Downloads</h2>
+            <p>Download reference materials required for Denver mobile food permitting.</p>
+            <div v-if="libraryLoading" class="alert info">Loading documents…</div>
+            <div v-else-if="libraryError" class="alert error">{{ libraryError }}</div>
+            <div v-else-if="libraryCards.length" class="document-grid">
+              <article
+                v-for="doc in libraryCards"
+                :key="doc.relativePath"
+                class="document-card"
+                :style="{ '--accent-primary': doc.accentPrimary, '--accent-secondary': doc.accentSecondary }"
+              >
+                <div class="document-card__thumb">
+                  <img :src="doc.icon" :alt="`${doc.title} icon`" class="document-card__icon" />
+                  <span class="document-card__tag">{{ doc.tag }}</span>
+                </div>
+                <div class="document-card__body">
+                  <h3>{{ doc.title }}</h3>
+                  <p>{{ doc.description }}</p>
+                  <div class="document-card__details">
+                    <span>{{ doc.extension || 'PDF' }}</span>
+                    <span>{{ formatFileSize(doc.sizeBytes) }}</span>
+                    <span>{{ formatUploadedAt(doc.modifiedAt) }}</span>
+                  </div>
+                  <a
+                    class="document-card__download"
+                    :href="doc.url"
+                    target="_blank"
+                    rel="noopener"
+                  >
+                    Download
+                  </a>
+                </div>
+              </article>
+            </div>
+            <div v-else class="alert info">No reference documents found.</div>
+          </section>
+
           <section v-else class="tab-content">
             <h2>Evaluation History</h2>
             <div v-if="history.length" class="history">
@@ -566,8 +605,21 @@ import redhatLogo from './assets/redhat-logo.svg';
 import twitterIcon from './assets/icons/twitter.svg';
 import facebookIcon from './assets/icons/facebook.svg';
 import instagramIcon from './assets/icons/instagram.svg';
-import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue';
-import { autocompleteAddress, evaluateApplication, fetchDocuments, initializeAgentStream, queryAgent, resetSession, uploadDocument } from './services/api.js';
+import pdfIcon from './assets/icons/document-pdf.svg';
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
+import {
+  autocompleteAddress,
+  evaluateApplication,
+  fetchDocuments,
+  fetchDocumentLibrary,
+  fetchEvaluationHistory,
+  fetchSavedApplication,
+  fetchSession,
+  initializeAgentStream,
+  queryAgent,
+  resetSession,
+  uploadDocument,
+} from './services/api.js';
 
 const config = reactive({
   protocol: 'http',
@@ -751,6 +803,148 @@ const handleDocumentUpload = async (documentType, event) => {
   }
 };
 
+const toPlainApplication = () => JSON.parse(JSON.stringify(application));
+
+const applySavedApplication = (saved) => {
+  if (!saved || typeof saved !== 'object') {
+    return;
+  }
+  const defaults = createEmptyApplication();
+  const merged = { ...defaults, ...saved };
+  merged.cookingEquipment = Array.isArray(merged.cookingEquipment) ? merged.cookingEquipment : [];
+  merged.documents = Array.isArray(merged.documents) ? merged.documents : [];
+  Object.assign(application, merged);
+};
+
+const loadSavedApplication = async (targetSessionId = sessionId.value) => {
+  if (!targetSessionId) {
+    return;
+  }
+  try {
+    const { application: savedApplication, updatedAt } = await fetchSavedApplication(targetSessionId);
+    if (savedApplication && typeof savedApplication === 'object') {
+      applySavedApplication(savedApplication);
+      logs.value = [
+        {
+          id: crypto.randomUUID(),
+          type: 'info',
+          message: `Draft restored from database${updatedAt ? ` (saved ${new Date(updatedAt).toLocaleString()})` : ''}.`,
+          timestamp: Date.now(),
+        },
+        ...logs.value,
+      ];
+    }
+  } catch (error) {
+    if (error?.response?.status !== 404) {
+      console.warn('Failed to load saved application', error);
+    }
+  }
+};
+
+const loadEvaluationHistory = async (targetSessionId = sessionId.value) => {
+  if (!targetSessionId) {
+    history.value = [];
+    return;
+  }
+  try {
+    const { evaluations = [] } = await fetchEvaluationHistory(targetSessionId);
+    const normalized = evaluations.map((entry) => ({
+      id: entry.id ?? crypto.randomUUID(),
+      createdAt: entry.createdAt,
+      application: entry.application ?? {},
+      evaluation: entry.evaluation ?? {},
+    }));
+    history.value = normalized.sort((a, b) => {
+      const aTime = new Date(a.createdAt || 0).getTime();
+      const bTime = new Date(b.createdAt || 0).getTime();
+      return aTime - bTime;
+    });
+  } catch (error) {
+    console.warn('Failed to load evaluation history', error);
+  }
+};
+
+const loadDocumentLibrary = async () => {
+  libraryLoading.value = true;
+  libraryError.value = '';
+  try {
+    const { documents = [] } = await fetchDocumentLibrary();
+    documentLibrary.value = documents;
+  } catch (error) {
+    libraryError.value = error?.response?.data?.message || error.message || 'Failed to load documents.';
+  } finally {
+    libraryLoading.value = false;
+  }
+};
+
+const updateUrlForSession = (value) => {
+  if (typeof window === 'undefined') {
+    return;
+  }
+  const url = new URL(window.location.href);
+  if (value) {
+    url.search = `?${encodeURIComponent(value)}`;
+  } else {
+    url.search = '';
+  }
+  window.history.replaceState({}, '', url.toString());
+};
+
+const extractSessionIdFromQuery = () => {
+  if (typeof window === 'undefined') {
+    return '';
+  }
+  const search = window.location.search || '';
+  if (!search) {
+    return '';
+  }
+  const trimmed = search.slice(1).trim();
+  if (!trimmed) {
+    return '';
+  }
+  if (!trimmed.includes('=')) {
+    return decodeURIComponent(trimmed);
+  }
+  const params = new URLSearchParams(search);
+  return params.get('sessionId') || params.get('session') || params.get('id') || '';
+};
+
+const restoreSessionFromUrl = async (candidate) => {
+  if (!candidate) {
+    return;
+  }
+  try {
+    const { session } = await fetchSession(candidate);
+    if (!session?.sessionId) {
+      return;
+    }
+    sessionId.value = session.sessionId;
+    vectorDbId.value = session.vectorDbId || '';
+    showConfig.value = false;
+    logs.value = [
+      {
+        id: crypto.randomUUID(),
+        type: 'info',
+        message: `Restored session ${session.sessionId} from database.`,
+        timestamp: Date.now(),
+      },
+      ...logs.value,
+    ];
+  } catch (error) {
+    const message = error?.response?.data?.message || error.message || 'Failed to restore session from database.';
+    logs.value = [
+      {
+        id: crypto.randomUUID(),
+        type: 'error',
+        message,
+        timestamp: Date.now(),
+      },
+      ...logs.value,
+    ];
+    console.warn('Failed to restore session from URL', error);
+  }
+};
+
 const createEmptyApplication = () => ({
   businessName: '',
   operatorName: '',
@@ -777,6 +971,18 @@ const evaluationResult = ref(null);
 const evaluationLoading = ref(false);
 const formError = ref('');
 const history = ref([]);
+const documentLibrary = ref([]);
+const libraryLoading = ref(false);
+const libraryError = ref('');
+const libraryCards = computed(() =>
+  documentLibrary.value.map((doc) => ({
+    ...doc,
+    icon: doc.thumbnail || pdfIcon,
+    tag: doc.tag || doc.extension || 'Document',
+    accentPrimary: doc.accentPrimary || '#2563eb',
+    accentSecondary: doc.accentSecondary || '#60a5fa',
+  })),
+);
 const activeTab = ref('submit');
 
 const completedSections = computed(() => ({
@@ -808,10 +1014,6 @@ const commonQuestions = [
 ];
 
 const reversedHistory = computed(() => [...history.value].reverse());
-
-const pushHistory = (record) => {
-  history.value.push({ ...record, id: crypto.randomUUID() });
-};
 
 const pretty = (obj) => JSON.stringify(obj, null, 2);
 
@@ -941,12 +1143,22 @@ stream.addEventListener('log', (event) => {
 };
 
 watch(sessionId, (value) => {
+  updateUrlForSession(value);
   sessionDocuments.value = [];
+  history.value = [];
   Object.keys(documentUploadState).forEach((key) => {
     delete documentUploadState[key];
   });
   if (value) {
     loadSessionDocuments();
+    loadSavedApplication(value);
+    loadEvaluationHistory(value);
+  }
+});
+
+watch(activeTab, (value) => {
+  if (value === 'library' && (!documentLibrary.value.length || libraryError.value)) {
+    loadDocumentLibrary();
   }
 });
 
@@ -967,6 +1179,14 @@ onBeforeUnmount(() => {
   if (commissarySuggestionTimeout) {
     clearTimeout(commissarySuggestionTimeout);
   }
+});
+
+onMounted(() => {
+  const candidate = extractSessionIdFromQuery();
+  if (candidate) {
+    restoreSessionFromUrl(candidate);
+  }
+  loadDocumentLibrary();
 });
 
 const buildApplicationPayload = () => ({
@@ -1003,9 +1223,10 @@ const submitApplication = async () => {
   evaluationResult.value = null;
   try {
     const payload = buildApplicationPayload();
-    const { evaluation } = await evaluateApplication({ sessionId: sessionId.value, application: payload });
+    const formSnapshot = toPlainApplication();
+    const { evaluation } = await evaluateApplication({ sessionId: sessionId.value, application: payload, form: formSnapshot });
     evaluationResult.value = evaluation;
-    pushHistory({ application: payload, evaluation });
+    await loadEvaluationHistory(sessionId.value);
   } catch (error) {
     formError.value = error.response?.data?.message || error.message;
   } finally {

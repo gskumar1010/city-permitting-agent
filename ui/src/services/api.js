@@ -28,4 +28,7 @@ export const uploadDocument = ({ sessionId, documentType, file }) => {
 };
 export const fetchDocuments = (sessionId) => client.get(`/documents/${sessionId}`).then((res) => res.data);
 export const saveApplication = (payload) => client.post('/application', payload).then((res) => res.data);
+export const fetchEvaluationHistory = (sessionId) => client.get(`/evaluations/${sessionId}`).then((res) => res.data);
+export const fetchSavedApplication = (sessionId) => client.get(`/application/${sessionId}`).then((res) => res.data);
 export const fetchSession = (sessionId) => client.get(`/session/${sessionId}`).then((res) => res.data);
+export const fetchDocumentLibrary = () => client.get('/document-library').then((res) => res.data);
