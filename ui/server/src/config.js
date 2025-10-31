@@ -1,6 +1,19 @@
 import dotenv from 'dotenv';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 dotenv.config();
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const projectRoot = path.resolve(__dirname, '..', '..');
+
+const resolveDatabasePath = () => {
+  const rawPath = process.env.DATABASE_PATH?.trim();
+  if (!rawPath) {
+    return path.resolve(projectRoot, 'server/data/app.db');
+  }
+  return path.isAbsolute(rawPath) ? rawPath : path.resolve(projectRoot, rawPath);
+};
 
 const providerData = {
   fireworks_api_key: process.env.FIREWORKS_API_KEY || '',
@@ -10,7 +23,6 @@ const providerData = {
   tavily_search_api_key: process.env.TAVILY_SEARCH_API_KEY || '',
 };
 
-// Remove empty values so we don't send an all-empty payload
 const filteredProviderData = Object.fromEntries(
   Object.entries(providerData).filter(([, value]) => typeof value === 'string' && value.length > 0),
 );
@@ -25,5 +37,8 @@ export const config = {
   smarty: {
     authId: process.env.SMARTY_AUTH_ID || '',
     authToken: process.env.SMARTY_AUTH_TOKEN || '',
+  },
+  database: {
+    path: resolveDatabasePath(),
   },
 };
