@@ -3,10 +3,10 @@ kind: Kustomization
 resources:
   - ../../namespace
   - ../../llama-stack
-  - ../../notebooks
+  #- ../../notebooks
 
   # mcp-servers resources
   - ../../mcp-servers/openshift-mcp
 
   # city permitting app
-  - ../../app
+  - ../../app/base
