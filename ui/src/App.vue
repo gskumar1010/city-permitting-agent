@@ -28,7 +28,7 @@
     </header>
 
     <section class="page-title">
-      <h1 class="brand-title">Denver Food Truck Permit Assistant</h1>
+      <h1 class="brand-title">Denver Food Truck Permit Assistant.</h1>
     </section>
 
     <section class="config-card" v-show="showConfig">
