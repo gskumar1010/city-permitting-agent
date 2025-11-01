@@ -103,7 +103,7 @@
         <div v-else class="tabs">
 
           <section v-if="activeTab === 'submit'" class="tab-content">
-            <h2>Submit Permit Application</h2>
+            <h2>Evaluate Permit Application</h2>
             <form class="application-form" @submit.prevent="submitApplication">
               <div class="form-hero">
                 <div class="form-hero__copy">
