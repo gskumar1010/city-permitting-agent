@@ -728,6 +728,7 @@ const commissaryLoading = ref(false);
 const showCommissarySuggestions = ref(false);
 let commissarySuggestionTimeout = null;
 let suppressCommissaryFetch = false;
+let autoConnectInvoked = false;
 
 const fetchCommissarySuggestions = async (term) => {
   if (suppressCommissaryFetch) {
@@ -932,6 +933,22 @@ const toggleMultiValue = (targetArray, value) => {
   } else {
     targetArray.splice(index, 1);
   }
+};
+
+const shouldAutoConnect = () => {
+  if (typeof window === 'undefined') {
+    return false;
+  }
+  const params = new URLSearchParams(window.location.search || '');
+  if (!params.has('autoconnect')) {
+    return false;
+  }
+  const rawValue = params.get('autoconnect');
+  if (!rawValue) {
+    return true;
+  }
+  const normalized = rawValue.trim().toLowerCase();
+  return ['1', 'true', 'yes', 'on'].includes(normalized);
 };
 
 const setPanelVisibility = (state) => {
@@ -1268,10 +1285,14 @@ onBeforeUnmount(() => {
   }
 });
 
-onMounted(() => {
+onMounted(async () => {
   const candidate = extractSessionIdFromQuery();
   if (candidate) {
-    restoreSessionFromUrl(candidate);
+    await restoreSessionFromUrl(candidate);
+  }
+  if (!sessionReady.value && shouldAutoConnect() && !autoConnectInvoked) {
+    autoConnectInvoked = true;
+    initializeAgentHandler();
   }
   loadDocumentLibrary();
 });
