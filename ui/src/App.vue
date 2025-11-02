@@ -15,7 +15,7 @@
         </div>
       </div>
       <nav class="site-nav">
-        <button class="toggle-config" type="button" @click="showConfig = !showConfig">
+        <button class="toggle-config" type="button" @click="togglePanels">
           {{ showConfig ? 'Hide Connection Settings' : 'Show Connection Settings' }}
         </button>
         <div v-if="sessionReady" class="nav-tabs">
@@ -51,59 +51,37 @@
       </div>
     </section>
 
-    <section :class="['content-grid', { 'content-grid--collapsed': !showActivityPanel }]">
-      <transition name="slide-panel">
-        <aside v-if="showActivityPanel" class="activity-panel">
-          <div class="panel-header">
-            <div class="panel-header__title">
-              <h2>Activity</h2>
-              <button
-                type="button"
-                class="panel-toggle"
-                @click="showActivityPanel = false"
-                :aria-expanded="showActivityPanel"
-              >
-                Hide
-              </button>
-            </div>
+    <section class="content-grid">
+      <aside v-if="showActivityPanel" class="activity-panel">
+        <div class="panel-header">
+          <div class="panel-header__title">
+            <h2>Activity</h2>
           </div>
-          <div class="log-list">
-            <div
-              v-for="log in orderedLogs"
-              :key="log.id"
-              :class="['log-item', log.type]"
-            >
+        </div>
+        <div class="log-list">
+          <div
+            v-for="log in orderedLogs"
+            :key="log.id"
+            :class="['log-item', log.type]"
+          >
             <div class="log-header">
               <span class="log-time">{{ formatLogTime(log.timestamp) }}</span>
             </div>
             <div class="log-message">{{ log.message }}</div>
-            </div>
-            <div v-if="!logs.length" class="log-placeholder">Initialize the agent to view activity.</div>
           </div>
-          <div class="about-card">
-            <p><strong>Denver Food Truck Permit AI Agent</strong></p>
-            <ul>
-              <li>🤖 Automated compliance checking</li>
-              <li>✅ Completeness verification</li>
-              <li>📊 Scorecard evaluation</li>
-              <li>📚 Regulations knowledge base</li>
-              <li>🔎 RAG-powered responses</li>
-            </ul>
-          </div>
-        </aside>
-      </transition>
-      <transition name="slide-panel">
-        <aside v-if="!showActivityPanel" class="activity-panel activity-panel--collapsed">
-          <button
-            type="button"
-            class="panel-toggle"
-            @click="showActivityPanel = true"
-            aria-expanded="false"
-          >
-            Show Activity
-          </button>
-        </aside>
-      </transition>
+          <div v-if="!logs.length" class="log-placeholder">Initialize the agent to view activity.</div>
+        </div>
+        <div class="about-card">
+          <p><strong>Denver Food Truck Permit AI Agent</strong></p>
+          <ul>
+            <li>🤖 Automated compliance checking</li>
+            <li>✅ Completeness verification</li>
+            <li>📊 Scorecard evaluation</li>
+            <li>📚 Regulations knowledge base</li>
+            <li>🔎 RAG-powered responses</li>
+          </ul>
+        </div>
+      </aside>
 
       <main class="main-panel">
         <div v-if="!sessionReady" class="welcome">
@@ -126,7 +104,7 @@
 
         <div v-else class="tabs">
 
-          <section v-if="activeTab === 'submit'" class="tab-content">
+          <section v-if="activeTab === 'submit'" class="tab-content tab-content--form">
             <h2>Evaluate Permit Application</h2>
             <form class="application-form" @submit.prevent="submitApplication">
               <div class="form-hero">
@@ -306,7 +284,7 @@
                     </label>
                     <label class="checkbox-chip">
                       <input type="checkbox" v-model="application.hasVentilation" />
-                      <span>Adequate Ventilation System</span>
+                      <span>Commercial Grade Ventilation System</span>
                     </label>
                   </div>
                 </div>
@@ -956,6 +934,15 @@ const toggleMultiValue = (targetArray, value) => {
   }
 };
 
+const setPanelVisibility = (state) => {
+  showConfig.value = state;
+  showActivityPanel.value = state;
+};
+
+const togglePanels = () => {
+  setPanelVisibility(!showConfig.value);
+};
+
 const updateUrlForSession = (value) => {
   if (typeof window === 'undefined') {
     return;
@@ -999,7 +986,7 @@ const restoreSessionFromUrl = async (candidate) => {
     }
     sessionId.value = session.sessionId;
     vectorDbId.value = session.vectorDbId || '';
-    showConfig.value = false;
+    setPanelVisibility(false);
     logs.value = [
       {
         id: crypto.randomUUID(),
@@ -1206,7 +1193,7 @@ stream.addEventListener('log', (event) => {
       }
     }
     initializing.value = false;
-    showConfig.value = false;
+    setPanelVisibility(false);
     closeCurrentStream();
   });
 
@@ -1218,7 +1205,7 @@ stream.addEventListener('log', (event) => {
       { id: crypto.randomUUID(), type: 'error', message, timestamp: Date.now() },
     ];
     initializing.value = false;
-    showConfig.value = true;
+    setPanelVisibility(true);
     closeCurrentStream();
   });
 
@@ -1234,7 +1221,7 @@ stream.addEventListener('log', (event) => {
       { id: crypto.randomUUID(), type: 'error', message: 'Connection lost while initializing agent.', timestamp: Date.now() },
     ];
     initializing.value = false;
-    showConfig.value = true;
+    setPanelVisibility(true);
     closeCurrentStream();
   };
 };
@@ -1250,6 +1237,9 @@ watch(sessionId, (value) => {
     loadSessionDocuments();
     loadSavedApplication(value);
     loadEvaluationHistory(value);
+    showActivityPanel.value = false;
+  } else {
+    showActivityPanel.value = true;
   }
 });
 

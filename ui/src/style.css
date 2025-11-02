@@ -353,10 +353,6 @@ button.secondary {
   padding: 0 clamp(1.5rem, 3vw, 3rem) 3rem;
 }
 
-.content-grid--collapsed {
-  gap: 0;
-}
-
 .activity-panel {
   background: #ffffff;
   border-radius: 1rem;
@@ -368,17 +364,6 @@ button.secondary {
   box-shadow: 0 16px 36px -22px rgba(15, 38, 92, 0.35);
   flex: 0 0 300px;
   min-width: 260px;
-}
-
-.activity-panel--collapsed {
-  background: linear-gradient(145deg, rgba(15, 44, 83, 0.05), rgba(15, 44, 83, 0.02));
-  border: 1px dashed rgba(15, 44, 83, 0.25);
-  padding: 1rem;
-  align-items: center;
-  justify-content: center;
-  flex: 0 0 160px;
-  min-width: 140px;
-  gap: 0.5rem;
 }
 
 .main-panel {
@@ -544,6 +529,10 @@ button.secondary {
   box-shadow: 0 16px 40px -24px rgba(15, 38, 92, 0.25);
 }
 
+.tab-content--form {
+  padding-top: 0;
+}
+
 .application-form .columns {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -564,7 +553,11 @@ button.secondary {
   padding: 1.6rem;
   border-radius: 1rem;
   border: 1px solid rgba(15, 38, 92, 0.12);
-  background: linear-gradient(135deg, rgba(15, 44, 83, 0.08), rgba(15, 44, 83, 0.02));
+  background: linear-gradient(135deg, #e6ecff, #cedcff);
+  position: sticky;
+  top: 0;
+  z-index: 12;
+  box-shadow: 0 22px 46px -30px rgba(15, 38, 92, 0.55);
 }
 
 .form-hero__copy {
@@ -649,6 +642,15 @@ button.secondary {
 .form-hero__tip p {
   margin: 0;
   color: rgba(15, 44, 83, 0.78);
+}
+
+@media (max-width: 960px) {
+  .form-hero {
+    position: static;
+    top: auto;
+    z-index: auto;
+    box-shadow: none;
+  }
 }
 
 .form-section {
@@ -1727,6 +1729,7 @@ button.secondary {
     grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   }
 }
+
 .panel-header {
   display: flex;
   align-items: center;
@@ -1750,38 +1753,6 @@ button.secondary {
   color: #0c2340;
 }
 
-.panel-toggle {
-  background: rgba(12, 35, 64, 0.08);
-  border: 1px solid rgba(12, 35, 64, 0.18);
-  border-radius: 999px;
-  padding: 0.35rem 0.75rem;
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: #0c2340;
-  cursor: pointer;
-  transition: background-color 0.2s ease, border-color 0.2s ease;
-}
-
-.panel-toggle:hover {
-  background: rgba(12, 35, 64, 0.14);
-  border-color: rgba(12, 35, 64, 0.28);
-}
-
-.activity-panel--collapsed .panel-toggle {
-  width: 100%;
-  justify-content: center;
-}
-
-.slide-panel-enter-active,
-.slide-panel-leave-active {
-  transition: opacity 0.35s ease, transform 0.35s ease;
-}
-
-.slide-panel-enter-from,
-.slide-panel-leave-to {
-  opacity: 0;
-  transform: translateX(-20px);
-}
 .fade-slide-enter-active,
 .fade-slide-leave-active {
   transition: opacity 0.25s ease, transform 0.25s ease;
@@ -1791,31 +1762,4 @@ button.secondary {
 .fade-slide-leave-to {
   opacity: 0;
   transform: translateY(-6px);
-}
-.panel-toggle {
-  background: rgba(12, 35, 64, 0.08);
-  border: 1px solid rgba(12, 35, 64, 0.18);
-  border-radius: 999px;
-  padding: 0.35rem 0.75rem;
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: #0c2340;
-  cursor: pointer;
-  transition: background-color 0.2s ease, border-color 0.2s ease;
-}
-
-.panel-toggle:hover {
-  background: rgba(12, 35, 64, 0.14);
-  border-color: rgba(12, 35, 64, 0.28);
-}
-
-.slide-panel-enter-active .activity-panel,
-.slide-panel-leave-active .activity-panel {
-  transition: transform 0.35s ease, opacity 0.35s ease;
-}
-
-.slide-panel-enter-from .activity-panel,
-.slide-panel-leave-to .activity-panel {
-  transform: translateX(-20px);
-  opacity: 0;
 }
