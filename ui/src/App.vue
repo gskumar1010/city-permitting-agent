@@ -28,7 +28,7 @@
     </header>
 
     <section class="page-title">
-      <h1 class="brand-title">Denver Food Truck Permit Assistant.</h1>
+      <h1 class="brand-title">Denver Food Truck Permit Assistant</h1>
     </section>
 
     <section class="config-card" v-show="showConfig">
@@ -51,35 +51,59 @@
       </div>
     </section>
 
-    <section class="content-grid">
-      <aside class="activity-panel">
-        <div class="panel-header">
-          <h2>Activity</h2>
-        </div>
-        <div class="log-list">
-          <div
-            v-for="log in orderedLogs"
-            :key="log.id"
-            :class="['log-item', log.type]"
-          >
+    <section :class="['content-grid', { 'content-grid--collapsed': !showActivityPanel }]">
+      <transition name="slide-panel">
+        <aside v-if="showActivityPanel" class="activity-panel">
+          <div class="panel-header">
+            <div class="panel-header__title">
+              <h2>Activity</h2>
+              <button
+                type="button"
+                class="panel-toggle"
+                @click="showActivityPanel = false"
+                :aria-expanded="showActivityPanel"
+              >
+                Hide
+              </button>
+            </div>
+          </div>
+          <div class="log-list">
+            <div
+              v-for="log in orderedLogs"
+              :key="log.id"
+              :class="['log-item', log.type]"
+            >
             <div class="log-header">
               <span class="log-time">{{ formatLogTime(log.timestamp) }}</span>
             </div>
             <div class="log-message">{{ log.message }}</div>
+            </div>
+            <div v-if="!logs.length" class="log-placeholder">Initialize the agent to view activity.</div>
           </div>
-          <div v-if="!logs.length" class="log-placeholder">Initialize the agent to view activity.</div>
-        </div>
-        <div class="about-card">
-          <p><strong>Denver Food Truck Permit AI Agent</strong></p>
-          <ul>
-            <li>🤖 Automated compliance checking</li>
-            <li>✅ Completeness verification</li>
-            <li>📊 Scorecard evaluation</li>
-            <li>📚 Regulations knowledge base</li>
-            <li>🔎 RAG-powered responses</li>
-          </ul>
-        </div>
-      </aside>
+          <div class="about-card">
+            <p><strong>Denver Food Truck Permit AI Agent</strong></p>
+            <ul>
+              <li>🤖 Automated compliance checking</li>
+              <li>✅ Completeness verification</li>
+              <li>📊 Scorecard evaluation</li>
+              <li>📚 Regulations knowledge base</li>
+              <li>🔎 RAG-powered responses</li>
+            </ul>
+          </div>
+        </aside>
+      </transition>
+      <transition name="slide-panel">
+        <aside v-if="!showActivityPanel" class="activity-panel activity-panel--collapsed">
+          <button
+            type="button"
+            class="panel-toggle"
+            @click="showActivityPanel = true"
+            aria-expanded="false"
+          >
+            Show Activity
+          </button>
+        </aside>
+      </transition>
 
       <main class="main-panel">
         <div v-if="!sessionReady" class="welcome">
@@ -289,12 +313,21 @@
 
                 <label class="field field--full">
                   <span>Cooking Equipment</span>
-                  <select v-model="application.cookingEquipment" multiple>
-                    <option v-for="option in cookingEquipmentOptions" :key="option" :value="option">
+                  <div class="toggle-chip-list">
+                    <button
+                      v-for="option in cookingEquipmentOptions"
+                      :key="option"
+                      type="button"
+                      class="toggle-chip"
+                      :aria-pressed="application.cookingEquipment.includes(option)"
+                      :class="{ active: application.cookingEquipment.includes(option) }"
+                      @click="toggleMultiValue(application.cookingEquipment, option)"
+                    >
+                      <span class="toggle-chip__icon">{{ application.cookingEquipment.includes(option) ? '✔' : '•' }}</span>
                       {{ option }}
-                    </option>
-                  </select>
-                  <small class="field-hint">Hold Cmd/Ctrl while clicking to select multiple pieces of equipment.</small>
+                    </button>
+                  </div>
+                  <small class="toggle-chip__hint">Tap to add equipment. Selected items show a checkmark.</small>
                 </label>
                 <div class="section-actions">
                   <button type="button" class="link-button" @click="scrollToTop">⬆️ Back to Top</button>
@@ -309,65 +342,78 @@
                     <p>Confirm the permits and plans you will submit.</p>
                   </div>
                 </header>
-                <div class="form-section__grid form-section__grid--two">
-                  <label class="field">
-                    <span>Documents Attached *</span>
-                    <select v-model="application.documents" multiple>
-                      <option v-for="option in documentOptions" :key="option" :value="option">
-                        {{ option }}
-                      </option>
-                    </select>
-                    <small class="field-hint">Select every document you have prepared. Missing items may delay approval. Hold Cmd/Ctrl while clicking to select multiple documents.</small>
-                  </label>
-                  <div class="upload-panel" :class="{ 'upload-panel--disabled': !sessionReady }">
+                <div class="documentation-card" :class="{ 'documentation-card--disabled': !sessionReady }">
+                  <header class="documentation-card__header">
+                    <div>
+                      <h4>Documents Attached *</h4>
+                      <p>Choose the documents you’ve prepared. Selected items show a checkmark.</p>
+                    </div>
                     <div class="upload-panel__header">
                       <span>Upload Attachments</span>
                       <small v-if="!sessionReady">Initialize the permitting agent to enable uploads.</small>
-                      <small v-else-if="!application.documents.length">Select a document on the left to attach supporting files.</small>
-                      <small v-else>Upload the files that match each selected document. Accepted formats: PDF, images, DOC, DOCX.</small>
+                      <small v-else-if="!application.documents.length">Select a document below to attach supporting files.</small>
+                      <small v-else>Upload files that match each selected document. Accepted formats: PDF, images, DOC, DOCX.</small>
                     </div>
-                    <div v-if="sessionDocuments.length" class="upload-summary">
+                  </header>
+                  <div class="documentation-card__body">
+                    <div v-if="sessionDocuments.length" class="upload-summary documentation-card__summary">
                       {{ sessionDocuments.length }} file{{ sessionDocuments.length === 1 ? '' : 's' }} uploaded this session.
                     </div>
-                    <div v-if="application.documents.length" class="upload-list">
-                      <div v-for="option in application.documents" :key="option" class="upload-item">
-                        <div class="upload-item__header">
-                          <span class="upload-item__label">{{ option }}</span>
-                          <input
-                            class="upload-input"
-                            type="file"
-                            :id="`upload-${slugifyDocumentType(option)}`"
-                            :accept="documentUploadAccept"
-                            :disabled="!sessionReady || documentUploadState[option]?.uploading"
-                            @change="handleDocumentUpload(option, $event)"
-                          />
-                          <label
-                            class="upload-button"
-                            :class="{ disabled: !sessionReady || documentUploadState[option]?.uploading }"
-                            :for="`upload-${slugifyDocumentType(option)}`"
-                          >
-                            {{ documentUploadState[option]?.uploading ? 'Uploading...' : 'Upload File' }}
-                          </label>
-                        </div>
-                        <p v-if="documentUploadState[option]?.error" class="upload-error">
-                          {{ documentUploadState[option].error }}
-                        </p>
-                        <ul v-if="documentsByType[option]?.length" class="upload-files">
-                          <li v-for="doc in documentsByType[option]" :key="doc.id">
-                            <a :href="doc.url" target="_blank" rel="noopener">
-                              {{ doc.originalName }}
-                            </a>
-                            <span class="meta">{{ formatFileSize(doc.sizeBytes) }}</span>
-                            <span class="meta">{{ formatUploadedAt(doc.uploadedAt) }}</span>
-                          </li>
-                        </ul>
-                        <p v-else class="upload-hint">No uploads yet.</p>
+                    <div class="documentation-card__list">
+                      <div v-for="option in documentOptions" :key="option" class="documentation-option">
+                        <button
+                          type="button"
+                          class="toggle-chip"
+                          :aria-pressed="application.documents.includes(option)"
+                          :class="{ active: application.documents.includes(option) }"
+                          @click="toggleMultiValue(application.documents, option)"
+                        >
+                          <span class="toggle-chip__icon">{{ application.documents.includes(option) ? '✔' : '•' }}</span>
+                          {{ option }}
+                        </button>
+                        <transition name="fade-slide">
+                          <div v-if="application.documents.includes(option)" class="documentation-upload">
+                            <div class="upload-item">
+                              <div class="upload-item__header">
+                                <span class="upload-item__label">Attach {{ option }}</span>
+                                <input
+                                  class="upload-input"
+                                  type="file"
+                                  :id="`upload-${slugifyDocumentType(option)}`"
+                                  :accept="documentUploadAccept"
+                                  :disabled="!sessionReady || documentUploadState[option]?.uploading"
+                                  @change="handleDocumentUpload(option, $event)"
+                                />
+                                <label
+                                  class="upload-button"
+                                  :class="{ disabled: !sessionReady || documentUploadState[option]?.uploading }"
+                                  :for="`upload-${slugifyDocumentType(option)}`"
+                                >
+                                  {{ documentUploadState[option]?.uploading ? 'Uploading...' : 'Upload File' }}
+                                </label>
+                              </div>
+                              <p v-if="documentUploadState[option]?.error" class="upload-error">
+                                {{ documentUploadState[option].error }}
+                              </p>
+                              <ul v-if="documentsByType[option]?.length" class="upload-files">
+                                <li v-for="doc in documentsByType[option]" :key="doc.id">
+                                  <a :href="doc.url" target="_blank" rel="noopener">
+                                    {{ doc.originalName }}
+                                  </a>
+                                  <span class="meta">{{ formatFileSize(doc.sizeBytes) }}</span>
+                                  <span class="meta">{{ formatUploadedAt(doc.uploadedAt) }}</span>
+                                </li>
+                              </ul>
+                              <p v-else class="upload-hint">No uploads yet.</p>
+                            </div>
+                          </div>
+                        </transition>
                       </div>
                     </div>
                   </div>
                 </div>
                 <div class="section-actions">
-                  <button type="button" class="link-button" @click="scrollToTop">?? Back to Top</button>
+                  <button type="button" class="link-button" @click="scrollToTop">⬆️ Back to Top</button>
                 </div>
               </section>
 
@@ -653,6 +699,7 @@ const sessionId = ref('');
 const logs = ref([]);
 const vectorDbId = ref('');
 const currentStream = ref(null);
+const showActivityPanel = ref(true);
 
 const sessionReady = computed(() => Boolean(sessionId.value));
 const orderedLogs = computed(() => [...logs.value].sort((a, b) => (b.timestamp ?? 0) - (a.timestamp ?? 0)));
@@ -894,6 +941,18 @@ const loadDocumentLibrary = async () => {
     libraryError.value = error?.response?.data?.message || error.message || 'Failed to load documents.';
   } finally {
     libraryLoading.value = false;
+  }
+};
+
+const toggleMultiValue = (targetArray, value) => {
+  if (!Array.isArray(targetArray)) {
+    return;
+  }
+  const index = targetArray.indexOf(value);
+  if (index === -1) {
+    targetArray.push(value);
+  } else {
+    targetArray.splice(index, 1);
   }
 };
 
@@ -1302,7 +1361,15 @@ const resetApplication = () => {
 };
 
 const scrollToTop = () => {
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+  if (typeof window === 'undefined') {
+    return;
+  }
+  const root = document.querySelector('.app');
+  if (root?.scrollIntoView) {
+    root.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  } else {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
 };
 
 const formatLogTime = (timestamp) => {
