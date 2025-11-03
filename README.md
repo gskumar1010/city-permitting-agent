@@ -172,8 +172,7 @@ For production deployments with GPU acceleration and high availability:
 
 #### Requirements
 
-* OpenShift Cluster 4.17+
-* ~~2 GPUs with a minimum of 40GB VRAM each~~
+* OpenShift Cluster 4.18
 
 #### Deployment Instructions (START HERE)
 
