@@ -560,6 +560,12 @@ button.secondary {
   box-shadow: 0 22px 46px -30px rgba(15, 38, 92, 0.55);
 }
 
+.form-hero--complete {
+  border: 1px solid rgba(56, 189, 149, 0.35);
+  background: linear-gradient(135deg, #d4f8e8, #a9edd0);
+  box-shadow: 0 24px 48px -28px rgba(56, 189, 149, 0.45);
+}
+
 .form-hero__header {
   display: flex;
   align-items: center;

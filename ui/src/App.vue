@@ -107,7 +107,10 @@
           <section v-if="activeTab === 'submit'" class="tab-content tab-content--form">
             <h2>Evaluate Permit Application</h2>
             <form class="application-form" @submit.prevent="submitApplication">
-              <div :class="['form-hero', { 'form-hero--collapsed': formHeroCollapsed }]">
+              <div :class="[
+                'form-hero',
+                { 'form-hero--collapsed': formHeroCollapsed, 'form-hero--complete': allHighlightsComplete }
+              ]">
                 <div class="form-hero__copy">
                   <div class="form-hero__header">
                     <h2>Complete Your Permit Application</h2>
@@ -1099,8 +1102,12 @@ const libraryLastUpdatedDisplay = computed(() =>
 const activeTab = ref('submit');
 
 const completedSections = computed(() => ({
-  overview: Boolean(application.businessName && application.operatorName && application.vehicleType && application.menuItems.trim()),
-  commissary: Boolean(application.commissaryName && application.commissaryAddress.trim() && application.locations.trim() && application.hours.trim()),
+  overview: Boolean(
+    application.businessName &&
+      application.operatorName &&
+      application.vehicleType &&
+      application.menuItems.trim()
+  ),
   water: Boolean(
     application.cleanWater > 0 &&
       application.wasteWater > 0 &&
@@ -1110,6 +1117,10 @@ const completedSections = computed(() => ({
   ),
   docs: Array.isArray(application.documents) && application.documents.length > 0,
 }));
+
+const allHighlightsComplete = computed(() =>
+  completedSections.value.overview && completedSections.value.water && completedSections.value.docs
+);
 
 const questionInput = ref('');
 const questionLoading = ref(false);
