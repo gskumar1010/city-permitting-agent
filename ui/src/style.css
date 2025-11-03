@@ -550,7 +550,7 @@ button.secondary {
   flex-wrap: wrap;
   justify-content: space-between;
   gap: 1.5rem;
-  padding: 1.6rem;
+  padding: 1.6rem 2.2rem 1.6rem 1.6rem;
   border-radius: 1rem;
   border: 1px solid rgba(15, 38, 92, 0.12);
   background: linear-gradient(135deg, #e6ecff, #cedcff);
@@ -558,6 +558,13 @@ button.secondary {
   top: 0;
   z-index: 12;
   box-shadow: 0 22px 46px -30px rgba(15, 38, 92, 0.55);
+}
+
+.form-hero__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
 }
 
 .form-hero__copy {
@@ -614,7 +621,8 @@ button.secondary {
 }
 
 .form-hero__tip {
-  flex: 0 0 260px;
+  flex: 0 0 310px;
+  margin-right: 2.75rem;
   background: linear-gradient(135deg, rgba(15, 44, 83, 0.12), rgba(64, 129, 201, 0.12));
   color: #0f2c53;
   border-radius: 1rem;
@@ -644,12 +652,73 @@ button.secondary {
   color: rgba(15, 44, 83, 0.78);
 }
 
+.form-hero__toggle {
+  position: absolute;
+  top: 0.9rem;
+  right: 0.95rem;
+  width: 2.35rem;
+  height: 2.1rem;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(15, 38, 92, 0.2);
+  color: rgba(12, 35, 64, 0.7);
+  font-size: 0.82rem;
+  font-weight: 600;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.2s ease, color 0.2s ease;
+}
+
+.form-hero__toggle:hover {
+  background: rgba(255, 255, 255, 0.88);
+  border-color: rgba(15, 38, 92, 0.28);
+  color: rgba(12, 35, 64, 0.8);
+  transform: translateY(-1px);
+}
+
+.form-hero__toggle:focus-visible {
+  outline: 3px solid rgba(15, 38, 92, 0.35);
+  outline-offset: 2px;
+}
+
+.form-hero--collapsed {
+  padding: 1.1rem 2.2rem 1.1rem 1.4rem;
+  align-items: center;
+  box-shadow: 0 16px 30px -26px rgba(15, 38, 92, 0.45);
+}
+
+.form-hero--collapsed .form-hero__copy {
+  flex: 1 1 auto;
+}
+
+.form-hero--collapsed .form-hero__header h2 {
+  margin-bottom: 0;
+}
+
+.form-hero--collapsed .form-hero__toggle {
+  background: rgba(255, 255, 255, 0.78);
+}
+
+.form-hero--collapsed .form-hero__toggle:hover {
+  background: rgba(255, 255, 255, 0.9);
+}
+
 @media (max-width: 960px) {
   .form-hero {
-    position: static;
+    position: relative;
     top: auto;
     z-index: auto;
     box-shadow: none;
+  }
+  .form-hero__header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+  .form-hero__tip {
+    margin-right: 0;
   }
 }
 

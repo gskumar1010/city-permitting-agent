@@ -107,11 +107,22 @@
           <section v-if="activeTab === 'submit'" class="tab-content tab-content--form">
             <h2>Evaluate Permit Application</h2>
             <form class="application-form" @submit.prevent="submitApplication">
-              <div class="form-hero">
+              <div :class="['form-hero', { 'form-hero--collapsed': formHeroCollapsed }]">
                 <div class="form-hero__copy">
-                  <h2>Complete Your Permit Application</h2>
-                  <p>Fill out each section so the Denver Food Truck agent can review your plan instantly. When a section is complete, it will be highlighted in green. (All sections must be complete to proceed)</p>
-                  <ul class="form-highlights">
+                  <div class="form-hero__header">
+                    <h2>Complete Your Permit Application</h2>
+                    <button
+                      type="button"
+                      class="form-hero__toggle"
+                      @click="formHeroCollapsed = !formHeroCollapsed"
+                      :aria-label="formHeroCollapsed ? 'Show form overview' : 'Hide form overview'"
+                      :title="formHeroCollapsed ? 'Show overview' : 'Hide overview'"
+                    >
+                      <span aria-hidden="true">{{ formHeroCollapsed ? '<<' : '>>' }}</span>
+                    </button>
+                  </div>
+                  <p v-show="!formHeroCollapsed">Fill out each section so the Denver Food Truck agent can review your plan instantly. When a section is complete, it will be highlighted in green. (All sections must be complete to proceed)</p>
+                  <ul class="form-highlights" v-show="!formHeroCollapsed">
                     <li :class="{ complete: completedSections.overview }">
                       <span class="status-icon">{{ completedSections.overview ? '✅' : '🧾' }}</span>
                       Capture key business and commissary details
@@ -126,7 +137,7 @@
                     </li>
                   </ul>
                 </div>
-                <div class="form-hero__tip">
+                <div class="form-hero__tip" v-show="!formHeroCollapsed">
                   <span class="tip-eyebrow"><span class="tip-icon">💡</span> Agent Tip</span>
                   <p>Detailed responses improve evaluation accuracy and reduce follow-up requests.</p>
                 </div>
@@ -678,6 +689,7 @@ const logs = ref([]);
 const vectorDbId = ref('');
 const currentStream = ref(null);
 const showActivityPanel = ref(true);
+const formHeroCollapsed = ref(false);
 
 const sessionReady = computed(() => Boolean(sessionId.value));
 const orderedLogs = computed(() => [...logs.value].sort((a, b) => (b.timestamp ?? 0) - (a.timestamp ?? 0)));
