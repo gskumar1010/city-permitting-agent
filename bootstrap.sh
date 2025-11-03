@@ -25,7 +25,7 @@ echo "Creating the llama-serve namespace, which holds Llama Stack"
 oc new-project llama-serve
 
 echo "At this point, please import the cluster secrets following the installation guide"
-pause
+read -p "Once completed, Press ENTER to continue"
 
 echo "Installing the City Permitting Agent runtime components"
 apply_firmly kubernetes/kustomize/overlay/maas
