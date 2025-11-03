@@ -4,7 +4,6 @@ metadata:
   annotations:
     image.openshift.io/triggers: '[{"from":{"kind":"ImageStreamTag","name":"city-permitting-ui:latest"},"fieldPath":"spec.template.spec.containers[?(@.name==\"city-permitting-ui\")].image"}]'
     openshift.io/generated-by: OpenShiftNewApp
-  creationTimestamp: null
   labels:
     app: city-permitting-ui
     app.kubernetes.io/component: city-permitting-ui
@@ -21,17 +20,16 @@ spec:
     metadata:
       annotations:
         openshift.io/generated-by: OpenShiftNewApp
-      creationTimestamp: null
       labels:
         deployment: city-permitting-ui
     spec:
       containers:
-      - image: city-permitting-ui:latest
-        name: city-permitting-ui
-        ports:
-        - containerPort: 8080
-          protocol: TCP
-        resources: {}
-        envFrom:
+        - image: city-permitting-ui:latest
+          name: city-permitting-ui
+          ports:
+            - containerPort: 8080
+              protocol: TCP
+          resources: {}
+          envFrom:
             - configMapRef:
                 name: smarty-config
