@@ -192,7 +192,7 @@ Make sure you are `oc login`'d to the cluster
    oc new-project llama-serve
    ```
 
-2. Navigate to the following **[📋 Google Doc](https://docs.google.com/document/d/1Bh4Oof4vLWo6f2vEuh8Erqma2SVMeMknYyu256mEe-8/edit?usp=sharing)** and create the MaaS secret and the Slack Secret
+2. Refer to the DemoJam presentation and create the MaaS secret, the Slack Secret and the UI Config Map
 
 3. Apply the Kubernetes manifests:
    ```bash
@@ -203,7 +203,7 @@ Make sure you are `oc login`'d to the cluster
    - vLLM model servers with GPU acceleration
    - Llama Stack orchestration server
    - MCP tool servers for enterprise integrations
-   - Streamlit web interface
+   - Vue web interface
    - Observability and monitoring stack
 
 <!-- ## 🔄 Development Workflow
