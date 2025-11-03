@@ -179,25 +179,10 @@ For production deployments with GPU acceleration and high availability:
 
 Make sure you are `oc login`'d to the cluster
 
-0. Deploy the AI Accelerator
-   ```bash
-   git clone https://github.com/redhat-ai-services/ai-accelerator
-   cd ai-accelerator
-   ./bootstrap.sh
-   # Select option number (8) rhoai-stable-2.22 and wait for installation
-   ```
+1. Navigate to the City Permitting Agent root folder and run ./bootstrap.sh
+   - When prompted, create the MaaS and Slack Secrets and the Smarty Auth ConfigMap
 
-1. Create a dedicated OpenShift project:
-   ```bash
-   oc new-project llama-serve
-   ```
-
-2. Refer to the DemoJam presentation and create the MaaS secret, the Slack Secret and the UI Config Map
-
-3. Apply the Kubernetes manifests:
-   ```bash
-   oc apply -k kubernetes/kustomize/overlay/maas
-   ```
+2. Smash that Enter to continue the bootstrap
    
    This will deploy:
    - vLLM model servers with GPU acceleration
