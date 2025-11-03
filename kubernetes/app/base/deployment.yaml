@@ -32,8 +32,6 @@ spec:
         - containerPort: 8080
           protocol: TCP
         resources: {}
-        env:
-        - name: SMARTY_AUTH_ID
-          value: ""
-        - name: SMARTY_AUTH_TOKEN
-          value: ""
+        envFrom:
+            - configMapRef:
+                name: smarty-config
